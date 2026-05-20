@@ -38,7 +38,7 @@ class ModMailReasonModal(discord.ui.Modal, title="Contact Staff (Mod Mail)"):
             min_length=10,
             max_length=1024,
             required=True,
-            placeholder="Describe the issue here..."
+            placeholder="Please describe your issue here..."
         )
     )
 
@@ -247,7 +247,10 @@ class ModMailAcceptView(discord.ui.View):
                 timeout_embed = failure("Mod mail closed due to inactivity.")
                 log.add_embed(timeout_embed)
                 await mod.send(embed=timeout_embed)
-                await user.send(embed=timeout_embed)
+                try:
+                    await user.send(embed=timeout_embed)
+                except discord.HTTPException:
+                    pass
                 del self.cog.active_mod_mails[user_id]
                 logs = await self.cog.mod_mail_report_channel.send(
                     file=discord.File(StringIO(str(log)), filename=log.filename)
@@ -277,7 +280,10 @@ class ModMailAcceptView(discord.ui.View):
                 close_embed = success(f"Mod mail successfully closed by {mail_msg.author}.")
                 log.add_embed(close_embed)
                 await mod.send(embed=close_embed)
-                await user.send(embed=close_embed)
+                try:
+                    await user.send(embed=close_embed)
+                except discord.HTTPException:
+                    pass
                 del self.cog.active_mod_mails[user_id]
                 logs = await self.cog.mod_mail_report_channel.send(
                     file=discord.File(StringIO(str(log)), filename=log.filename)
@@ -294,7 +300,31 @@ class ModMailAcceptView(discord.ui.View):
             if mail_msg.author == user:
                 await mod.send(mail_msg.content)
             elif mail_msg.author == mod:
-                await user.send(mail_msg.content)
+                guild_member = self.cog.tortoise_guild.get_member(user_id)
+                if guild_member is None:
+                    left_embed = failure("Mod mail closed: The user has left the server.")
+                    log.add_embed(left_embed)
+                    await mod.send(embed=left_embed)
+
+                    del self.cog.active_mod_mails[user_id]
+                    logs = await self.cog.mod_mail_report_channel.send(
+                        file=discord.File(StringIO(str(log)), filename=log.filename)
+                    )
+                    await self.cog.update_staff_embed(
+                        user_id,
+                        description=logs.jump_url,
+                        footer_append="❌ Closed: User left the server.",
+                        color=discord.Color.red()
+                    )
+                    del self.cog.modmail_messages[user_id]
+                    break
+
+                try:
+                    await user.send(mail_msg.content)
+                except discord.HTTPException:
+                    dm_closed_embed = failure("Could not deliver message: The user closed their DMs.")
+                    log.add_embed(dm_closed_embed)
+                    await mod.send(embed=dm_closed_embed)
 
 
 class TortoiseDM(commands.Cog):
@@ -324,7 +354,7 @@ class TortoiseDM(commands.Cog):
         # bool whether that option is disabled or not.
         # TODO if callable errors container will not be properly updated so users will not be able to call it again
         self._options = {
-            1472366942722723995: {
+            constants.mod_mail_emoji_id: {
                 "message": "Contact staff (Mod Mail)",
                 "callable": self.create_mod_mail,
                 "check": lambda: self.bot.tortoise_meta_cache["mod_mail"]
@@ -603,7 +633,7 @@ class TortoiseDM(commands.Cog):
         self.modmail_messages[user.id] = msg.id
         self.pending_mod_mails.add(user.id)
 
-        self.cog.cool_down.add_to_cool_down(user.id)
+        self.cool_down.add_to_cool_down(user.id)
 
         if source == "dm":
             embed = info("Mail is initialized and the moderators have been contacted.\n"
