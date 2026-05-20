@@ -27,18 +27,19 @@ class UnsupportedFileEncoding(ValueError):
     pass
 
 
-class ModMailReasonModal(discord.ui.Modal, title="Open Mod Mail"):
-    reason = discord.ui.TextInput(
-        label="Reason for contacting staff",
-        style=discord.TextStyle.long,
-        placeholder=(
-            "⚠️NOTE: Mod mail is strictly for reporting issues, scams, bot accounts or any server related help\n"
-            "Do NOT use this for general programming help.\n\n"
-            "Please describe your issue here..."
+class ModMailReasonModal(discord.ui.Modal, title="Contact Staff (Mod Mail)"):
+    reason = discord.ui.Label(
+        text="Reason for contacting staff",
+        description=(
+            "⚠️ Mod mail is strictly for reporting scams, bots or server related issues."
         ),
-        min_length=10,
-        max_length=1024,
-        required=True
+        component=discord.ui.TextInput(
+            style=discord.TextStyle.long,
+            min_length=10,
+            max_length=1024,
+            required=True,
+            placeholder="Describe the issue here..."
+        )
     )
 
     def __init__(self, cog: "TortoiseDM"):
@@ -48,7 +49,7 @@ class ModMailReasonModal(discord.ui.Modal, title="Open Mod Mail"):
     async def on_submit(self, interaction: discord.Interaction):
         user = interaction.user
         await interaction.response.defer(ephemeral=True)
-        await self.cog.create_mod_mail(user, reason=self.reason.value, source="dm")
+        await self.cog.create_mod_mail(user, reason=self.reason.component.value, source="dm")
 
 
 class DutyScheduleModal(discord.ui.Modal, title="Set Daily Mod Mail Schedule"):
@@ -323,7 +324,7 @@ class TortoiseDM(commands.Cog):
         # bool whether that option is disabled or not.
         # TODO if callable errors container will not be properly updated so users will not be able to call it again
         self._options = {
-            constants.mod_mail_emoji_id: {
+            1472366942722723995: {
                 "message": "Contact staff (Mod Mail)",
                 "callable": self.create_mod_mail,
                 "check": lambda: self.bot.tortoise_meta_cache["mod_mail"]
