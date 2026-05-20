@@ -190,6 +190,8 @@ class ModMailAcceptView(discord.ui.View):
             await interaction.response.send_message("User not found.", ephemeral=True)
             return
 
+        await interaction.response.defer(ephemeral=True)
+
         self.clear_items()
         await self.cog.update_staff_embed_from_message(
             interaction.message,
@@ -212,22 +214,25 @@ class ModMailAcceptView(discord.ui.View):
             await interaction.followup.send("Mod mail failed: moderator DMs closed.", ephemeral=True)
             return
 
-        await user.send(
-            embed=authored(
-                (
-                    f"{mod.name} has accepted your mod mail request.\n"
-                    "Reply here in DMs to chat with them.\n"
-                    "This mod mail will be logged, by continuing you agree to that."
-                ),
-                author=mod
+        try:
+            await user.send(
+                embed=authored(
+                    (
+                        f"{mod.name} has accepted your mod mail request.\n"
+                        "Reply here in DMs to chat with them.\n"
+                        "This mod mail will be logged, by continuing you agree to that."
+                    ),
+                    author=mod
+                )
             )
-        )
+        except discord.HTTPException:
+            await interaction.followup.send("Failed to notify the user. Their DMs might be closed.", ephemeral=True)
+            return
 
         self.cog.pending_mod_mails.remove(user_id)
         self.cog.active_mod_mails[user_id] = mod.id
         embed = success("Mod Mail initialized. Check your DMs")
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
         first_timeout = 21_600
         regular_timeout = 1800
@@ -246,7 +251,10 @@ class ModMailAcceptView(discord.ui.View):
             except TimeoutError:
                 timeout_embed = failure("Mod mail closed due to inactivity.")
                 log.add_embed(timeout_embed)
-                await mod.send(embed=timeout_embed)
+                try:
+                    await mod.send(embed=timeout_embed)
+                except discord.HTTPException:
+                    pass
                 try:
                     await user.send(embed=timeout_embed)
                 except discord.HTTPException:
@@ -279,7 +287,10 @@ class ModMailAcceptView(discord.ui.View):
             if mail_msg.content.lower() == "close" and mail_msg.author.id == mod.id:
                 close_embed = success(f"Mod mail successfully closed by {mail_msg.author}.")
                 log.add_embed(close_embed)
-                await mod.send(embed=close_embed)
+                try:
+                    await mod.send(embed=close_embed)
+                except discord.HTTPException:
+                    pass
                 try:
                     await user.send(embed=close_embed)
                 except discord.HTTPException:
@@ -298,13 +309,19 @@ class ModMailAcceptView(discord.ui.View):
                 break
 
             if mail_msg.author == user:
-                await mod.send(mail_msg.content)
+                try:
+                    await mod.send(mail_msg.content)
+                except discord.HTTPException:
+                    pass
             elif mail_msg.author == mod:
                 guild_member = self.cog.tortoise_guild.get_member(user_id)
                 if guild_member is None:
                     left_embed = failure("Mod mail closed: The user has left the server.")
                     log.add_embed(left_embed)
-                    await mod.send(embed=left_embed)
+                    try:
+                        await mod.send(embed=left_embed)
+                    except discord.HTTPException:
+                        pass
 
                     del self.cog.active_mod_mails[user_id]
                     logs = await self.cog.mod_mail_report_channel.send(
@@ -324,7 +341,10 @@ class ModMailAcceptView(discord.ui.View):
                 except discord.HTTPException:
                     dm_closed_embed = failure("Could not deliver message: The user closed their DMs.")
                     log.add_embed(dm_closed_embed)
-                    await mod.send(embed=dm_closed_embed)
+                    try:
+                        await mod.send(embed=dm_closed_embed)
+                    except discord.HTTPException:
+                        pass
 
 
 class TortoiseDM(commands.Cog):
