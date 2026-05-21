@@ -5,6 +5,7 @@ import discord
 import aiohttp
 import asyncio
 import io
+import urllib.parse
 from discord.ext import commands
 from discord import Member, Message, app_commands, Guild
 
@@ -15,9 +16,26 @@ from bot.constants import allowed_file_extensions
 from bot.utils.checks import tortoise_bot_developer_only
 from bot.utils.misc import get_user_avatar
 from bot.utils.custom_types import FakeInteraction
-
+from bot.utils.cooldown import CoolDown
 
 logger = logging.getLogger(__name__)
+
+
+class PDFViewerButtonView(discord.ui.View):
+
+    def __init__(self, bot: commands.Bot, original_msg_id: int):
+        super().__init__(timeout=None)
+        self.bot = bot
+        self.original_msg_id = original_msg_id
+
+        self.click_cooldown = CoolDown(seconds=60)
+        self.bot.loop.create_task(self.click_cooldown.start())
+
+        self.open_button.custom_id = f"pdf_view_ctx:{original_msg_id}"
+
+    @discord.ui.button(label="Open in Web Viewer", style=discord.ButtonStyle.link)
+    async def open_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
 
 
 class Security(commands.Cog):
@@ -26,6 +44,8 @@ class Security(commands.Cog):
         self._guild = None
         self._trusted = None
         self._log_channel = None
+
+        self.interaction_cooldowns = {}
 
     @property
     def guild(self):
@@ -73,6 +93,7 @@ class Security(commands.Cog):
             return
 
         if message.attachments:
+            await self.process_pdf_attachments(message)
             deleted = await self.deal_with_attachments(message)
             if deleted:
                 self.bot.suppressed_deletes.add(message.id)
@@ -97,6 +118,93 @@ class Security(commands.Cog):
             return True
         return False
 
+    async def process_pdf_attachments(self, message: Message):
+        for attachment in message.attachments:
+            if attachment.filename.lower().endswith('.pdf'):
+
+                embed = discord.Embed(
+                    title="📄 View This File Online",
+                    description=(
+                        f"You can safely view **{attachment.filename}** within your web browser "
+                        f"without needing to download the file locally.\n\n"
+                        f"💡 *Click the button below to compile a fresh web view link.*"
+                    ),
+                    color=0xffb101
+                )
+                embed.set_footer(text="We do not recommend downloading docs from discord.")
+
+                view = PDFViewerButtonView(self.bot, message.id)
+
+                try:
+                    await message.channel.send(embed=embed, view=view, reference=message)
+                except discord.HTTPException:
+                    pass
+
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        if interaction.type != discord.InteractionType.component:
+            return
+
+        custom_id = interaction.data.get("custom_id", "")
+        if not custom_id.startswith("pdf_view_ctx:"):
+            return
+
+        user_id = interaction.user.id
+        now = discord.utils.utcnow().timestamp()
+
+        if user_id not in self.interaction_cooldowns:
+            self.interaction_cooldowns[user_id] = []
+
+        self.interaction_cooldowns[user_id] = [t for t in self.interaction_cooldowns[user_id] if now - t < 30]
+
+        if len(self.interaction_cooldowns[user_id]) >= 3:
+            await interaction.response.send_message(
+                embed=warning("You are clicking this too fast. Please wait a few seconds before trying again."),
+                ephemeral=True
+            )
+            return
+
+        self.interaction_cooldowns[user_id].append(now)
+
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            original_msg_id = int(custom_id.split(":")[1])
+            # Fetch the message context using the channel parameters to grab updated tokens
+            origin_message = await interaction.channel.fetch_message(original_msg_id)
+        except (discord.NotFound, discord.Forbidden, ValueError, IndexError):
+            await interaction.followup.send(
+                embed=warning(
+                    "Could not open file: The original upload message was deleted or is no longer accessible."),
+                ephemeral=True
+            )
+            return
+
+        target_attachment = None
+        for attachment in origin_message.attachments:
+            if attachment.filename.lower().endswith('.pdf'):
+                target_attachment = attachment
+                break
+
+        if not target_attachment:
+            await interaction.followup.send(
+                embed=warning(
+                    "Could not open file: The PDF asset could not be found inside that message payload context."),
+                ephemeral=True
+            )
+            return
+
+        encoded_url = urllib.parse.quote(target_attachment.url, safe='')
+        viewer_domain = "https://viewer.tortoisecommunity.org"
+        final_viewer_url = f"{viewer_domain}/{encoded_url}"
+        success_embed = success(
+            f"### 🔗 [Click here]({final_viewer_url}) to open **{target_attachment.filename}** in Web Viewer\n\n"
+        )
+        success_embed.set_footer(text="This temporary direct stream pathway link remains valid for 24 hours")
+        await interaction.followup.send(
+            embed=success_embed,
+            ephemeral=True
+        )
 
     async def archive_and_delete_message(
             self,
@@ -364,21 +472,21 @@ class Security(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, msg_before, msg_after):
-        if msg_before.content == msg_after.content:
+        if msg_before.content == msg_after.content and len(msg_before.attachments) == len(msg_after.attachments):
             return
         elif self.is_security_whitelisted(msg_after):
             return
 
-        # Log that the message was edited for security reasons
-        msg = (
-            f"**Channel**\n{msg_before.channel.mention}\n\n"
-            f"**Before**\n{msg_before.content}\n\n"
-            f"**After**\n{msg_after.content}\n\n"
-            f"[jump]({msg_after.jump_url})"
-        )
-        embed = info(msg, msg_before.guild.me, title="Message edited")
-        embed.set_footer(text=f"Author: {msg_before.author}", icon_url=get_user_avatar(msg_before.author))
-        await self.log_channel.send(embed=embed)
+        if msg_before.content != msg_after.content:
+            msg = (
+                f"**Channel**\n{msg_before.channel.mention}\n\n"
+                f"**Before**\n{msg_before.content}\n\n"
+                f"**After**\n{msg_after.content}\n\n"
+                f"[jump]({msg_after.jump_url})"
+            )
+            embed = info(msg, msg_before.guild.me, title="Message edited")
+            embed.set_footer(text=f"Author: {msg_before.author}", icon_url=get_user_avatar(msg_before.author))
+            await self.log_channel.send(embed=embed)
 
         # Check if the new message violates our security
         await self.security_check(msg_after)
