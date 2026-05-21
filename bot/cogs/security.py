@@ -16,7 +16,6 @@ from bot.constants import allowed_file_extensions
 from bot.utils.checks import tortoise_bot_developer_only
 from bot.utils.misc import get_user_avatar
 from bot.utils.custom_types import FakeInteraction
-from bot.utils.cooldown import CoolDown
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +26,9 @@ class PDFViewerButtonView(discord.ui.View):
         super().__init__(timeout=None)
         self.bot = bot
         self.original_msg_id = original_msg_id
-
-        self.click_cooldown = CoolDown(seconds=60)
-        self.bot.loop.create_task(self.click_cooldown.start())
-
         self.open_button.custom_id = f"pdf_view_ctx:{original_msg_id}"
 
-    @discord.ui.button(label="Open in Web Viewer", style=discord.ButtonStyle.link)
+    @discord.ui.button(label="View Online", style=discord.ButtonStyle.secondary, emoji="🔗")
     async def open_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         pass
 
@@ -123,15 +118,15 @@ class Security(commands.Cog):
             if attachment.filename.lower().endswith('.pdf'):
 
                 embed = discord.Embed(
-                    title="📄 View This File Online",
+                    title="Open in Web Viewer",
                     description=(
                         f"You can safely view **{attachment.filename}** within your web browser "
                         f"without needing to download the file locally.\n\n"
-                        f"💡 *Click the button below to compile a fresh web view link.*"
+                        f"-# Click the button below to generate a fresh link."
                     ),
                     color=0xffb101
                 )
-                embed.set_footer(text="We do not recommend downloading docs from discord.")
+                embed.set_footer(text="We do not recommend downloading documents from discord.")
 
                 view = PDFViewerButtonView(self.bot, message.id)
 
@@ -170,7 +165,6 @@ class Security(commands.Cog):
 
         try:
             original_msg_id = int(custom_id.split(":")[1])
-            # Fetch the message context using the channel parameters to grab updated tokens
             origin_message = await interaction.channel.fetch_message(original_msg_id)
         except (discord.NotFound, discord.Forbidden, ValueError, IndexError):
             await interaction.followup.send(
@@ -200,7 +194,7 @@ class Security(commands.Cog):
         success_embed = success(
             f"### 🔗 [Click here]({final_viewer_url}) to open **{target_attachment.filename}** in Web Viewer\n\n"
         )
-        success_embed.set_footer(text="This temporary direct stream pathway link remains valid for 24 hours")
+        success_embed.set_footer(text="This temporary link remains valid for 24 hours")
         await interaction.followup.send(
             embed=success_embed,
             ephemeral=True
