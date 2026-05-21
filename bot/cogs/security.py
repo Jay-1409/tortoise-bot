@@ -192,7 +192,7 @@ class Security(commands.Cog):
         viewer_domain = "https://viewer.tortoisecommunity.org"
         final_viewer_url = f"{viewer_domain}/{encoded_url}"
         success_embed = success(
-            f"### 🔗 [Click here]({final_viewer_url}) to open **{target_attachment.filename}** in Web Viewer\n\n"
+            f"[Click here]({final_viewer_url}) to open **{target_attachment.filename}** in Web Viewer\n\n"
         )
         success_embed.set_footer(text="This temporary link remains valid for 24 hours")
         await interaction.followup.send(
