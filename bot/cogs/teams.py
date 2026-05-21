@@ -317,7 +317,7 @@ class JoinReasonModal(discord.ui.Modal, title="Join Team Reason"):
 class TeamCog(commands.Cog):
     team_group = app_commands.Group(name="team", description="All management commands related to teams.")
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: "Bot"):
         self.bot = bot
         self.team = bot.team_manager
         self.log_channel = None

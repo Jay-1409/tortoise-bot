@@ -12,7 +12,7 @@ from discord import Member, Message, app_commands, Guild
 from bot import constants
 from bot.utils.embed_handler import info, moderation_log_embed, warning, success, infraction_embed
 from bot.utils.message_handler import RemovableMessage
-from bot.constants import allowed_file_extensions
+from bot.constants import allowed_file_extensions, online_viewer_url
 from bot.utils.checks import tortoise_bot_developer_only
 from bot.utils.misc import get_user_avatar
 from bot.utils.custom_types import FakeInteraction
@@ -189,10 +189,11 @@ class Security(commands.Cog):
             return
 
         encoded_url = urllib.parse.quote(target_attachment.url, safe='')
-        viewer_domain = "https://viewer.tortoisecommunity.org"
-        final_viewer_url = f"{viewer_domain}/{encoded_url}"
-        success_embed = success(
-            f"[Click here]({final_viewer_url}) to open **{target_attachment.filename}** in Web Viewer\n\n"
+        final_viewer_url = f"{online_viewer_url}/{encoded_url}"
+        success_embed = info(
+            f"[Click here]({final_viewer_url}) to open **{target_attachment.filename}** in Web Viewer\n\n",
+            self.bot.user,
+            ""
         )
         success_embed.set_footer(text="This temporary link remains valid for 24 hours")
         await interaction.followup.send(
@@ -324,7 +325,7 @@ class Security(commands.Cog):
             infraction_type=constants.Infraction.ban,
             reason=reason,
             is_dm=True,
-            can_appeal=True
+            permanent=False
         )
         embed.set_footer(text="⚠️ This was an automated action. If you'd like to appeal, join the appeal server.")
 
@@ -503,6 +504,7 @@ class Security(commands.Cog):
         await interaction.response.defer()
         self.bot.advanced_protection = True
         await interaction.followup.send(embed=success(f"Advanced Protection™ Enabled."), ephemeral=False)
+
 
 async def setup(bot):
     await bot.add_cog(Security(bot))

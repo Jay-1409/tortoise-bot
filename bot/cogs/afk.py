@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from bot.bot import Bot
 
 class AFK(commands.Cog):
-    def __init__(self, bot: Bot) -> None:
+    def __init__(self, bot: "Bot") -> None:
         self.bot = bot
         self.manager = bot.afk_manager
         self.cleanup_expired.start()
@@ -22,8 +22,8 @@ class AFK(commands.Cog):
     def cog_unload(self):
         self.cleanup_expired.cancel()
 
-    @app_commands.command(name="setafk", description="Set AFK status.")
-    async def setafk(
+    @app_commands.command(name="set_afk", description="Set AFK status.")
+    async def set_afk(
         self,
         interaction: discord.Interaction,
         hours: Optional[int] = None,

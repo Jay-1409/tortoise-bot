@@ -21,7 +21,8 @@ default_avatar_url = "https://cdn.discordapp.com/embed/avatars/4.png"
 appeal_server_link = "https://discord.com/invite/YxEzEqMNY8"
 server_link = "https://discord.com/invite/Ex8xeWD"
 online_compiler_link = "https://execute.tortoisecommunity.org"
-runtime_bot_link = "https://runtime-bot.tortoisecommunity.org/"
+runtime_bot_link = "https://runtime-bot.tortoisecommunity.org"
+online_viewer_url = "https://viewer.tortoisecommunity.org"
 
 # Channel IDs
 welcome_channel_id = 738731842538176522
