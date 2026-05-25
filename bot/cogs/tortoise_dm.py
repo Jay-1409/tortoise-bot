@@ -314,7 +314,8 @@ class ModMailAcceptView(discord.ui.View):
                 except discord.HTTPException:
                     pass
             elif mail_msg.author == mod:
-                guild_member = self.cog.tortoise_guild.get_member(user_id)
+                guild_member = (self.cog.tortoise_guild.get_member(user_id)
+                                or self.cog.ban_appeal_guild.get_member(user_id))
                 if guild_member is None:
                     left_embed = failure("Mod mail closed: The user has left the server.")
                     log.add_embed(left_embed)
@@ -353,6 +354,7 @@ class TortoiseDM(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._tortoise_guild = None
+        self._ban_appeal_guild = None
         self._admin_role = None
         self._moderator_role = None
         self._mod_mail_ping_role = None
@@ -428,6 +430,12 @@ class TortoiseDM(commands.Cog):
         if self._tortoise_guild is None:
             self._tortoise_guild = self.bot.get_guild(constants.tortoise_guild_id)
         return self._tortoise_guild
+
+    @property
+    def ban_appeal_guild(self):
+        if self._ban_appeal_guild is None:
+            self._ban_appeal_guild = self.bot.get_guild(constants.ban_appeal_server_id)
+        return self._ban_appeal_guild
 
     @property
     def admin_role(self):
