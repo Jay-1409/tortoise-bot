@@ -235,7 +235,7 @@ class PersistentJoinRequestView(discord.ui.View):
         style=discord.ButtonStyle.blurple,
         custom_id="team_request_join_start"
     )
-    async def request_join(self, interaction: discord.Interaction):
+    async def request_join(self, interaction: discord.Interaction, button: discord.ui.Button): # noqa
         existing = await self.cog.team.get_user_team(interaction.guild.id, interaction.user.id)
         if existing:
             return await interaction.response.send_message(
