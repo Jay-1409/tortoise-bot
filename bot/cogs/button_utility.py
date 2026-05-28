@@ -55,11 +55,9 @@ class TicketReasonSelect(discord.ui.Select):
 
         self.disabled = True
 
-        await interaction.edit_original_response(view=self.view)
-
-        await interaction.response.defer(ephemeral=True, thinking=True)
-
         if reason == "accidental_trap_victim":
+            await interaction.response.edit_message(view=self.view)
+
             is_banned = await self.cog.bot.progression_manager.is_auto_banned(user_id=user.id,
                                                                               guild_id=tortoise_guild_id)
 
@@ -103,8 +101,10 @@ class TicketReasonSelect(discord.ui.Select):
                 )
 
         else:
-            await interaction.edit_original_response(content="⏳ Processing your request and opening a ticket...",
-                                                     view=None)
+            await interaction.response.edit_message(
+                content="⏳ Processing your request and opening a ticket...",
+                view=self.view
+            )
 
             try:
                 embed = info(
