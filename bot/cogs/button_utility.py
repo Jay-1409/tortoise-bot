@@ -55,6 +55,8 @@ class TicketReasonSelect(discord.ui.Select):
 
         self.disabled = True
 
+        await interaction.edit_original_response(view=self.view)
+
         await interaction.response.defer(ephemeral=True, thinking=True)
 
         if reason == "accidental_trap_victim":
