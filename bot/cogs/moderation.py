@@ -334,10 +334,10 @@ class Moderation(commands.Cog):
         await interaction.guild.unban(user=user, reason=reason)
         try:
             await user.send(
+                content=constants.server_link,
                 embed=info(
                     "You have been unbanned in Tortoise Community\n"
-                    "Please use the below link to rejoin the server\n"
-                    f"👉 [Invite Link]({constants.server_link}) ",
+                    "Please use the invite link to rejoin the server\n",
                     self.bot.user,
                     "Ban Lifted!",
                     "Welcome back to Tortoise Programming Community!",

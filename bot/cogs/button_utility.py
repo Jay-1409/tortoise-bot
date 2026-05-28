@@ -6,10 +6,130 @@ from discord import app_commands
 
 from bot.constants import (
     challenger_role_id, accepting_team_invites_role_id, tortoise_guild_id,
-    join_a_team_channel_id, teams_dashboard_message_id
+    join_a_team_channel_id, teams_dashboard_message_id, server_link
 )
 from bot.utils.checks import tortoise_bot_developer_only
 from bot.utils.embed_handler import info, failure
+
+
+class TicketReasonSelect(discord.ui.Select):
+    """Dropdown menu for selecting the ticket/ban appeal reason."""
+
+    def __init__(self, cog: "TortoiseDM"):
+        options = [
+            discord.SelectOption(
+                label="Accidentally Selected 'I am Bot' Option",
+                value="accidental_trap_victim",
+                description="I accidentally selected 'I am Bot' option while joining.",
+                emoji="🤖"
+            ),
+            discord.SelectOption(label="Unfair Ban", value="unfair_ban", description="I feel my ban was unjust.",
+                                 emoji="⚖️"),
+            discord.SelectOption(label="Apology / Second Chance", value="apology",
+                                 description="I admit my mistake and want to apologize.", emoji="🙏"),
+            discord.SelectOption(label="Compromised Account", value="compromised",
+                                 description="My account was hacked when the violation occurred.", emoji="🛡️"),
+            discord.SelectOption(label="Other Reason", value="other", description="Any other reason not listed above.",
+                                 emoji="📝"),
+        ]
+        super().__init__(
+            placeholder="Choose the reason for your appeal...",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+        self.cog = cog
+
+    async def callback(self, interaction: discord.Interaction):
+        user = interaction.user
+        reason = self.values[0]
+
+        reason_mappings = {
+            "accidental_trap_victim": "Accidentally Selected 'I am Bot' Option",
+            "unfair_ban": "Unfair Ban Appeal",
+            "apology": "Apology / Second Chance Request",
+            "compromised": "Compromised Account Appeal",
+            "other": "Other / Unspecified Reason"
+        }
+        chosen_reason = reason_mappings.get(reason, "Unspecified Reason")
+
+        self.disabled = True
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        if reason == "accidental_trap_victim":
+            is_banned = await self.cog.bot.progression_manager.is_auto_banned(user_id=user.id,
+                                                                              guild_id=tortoise_guild_id)
+
+            if is_banned:
+                guild = self.cog.bot.get_guild(tortoise_guild_id)
+
+                try:
+                    ban_entry = await guild.fetch_ban(discord.Object(id=user.id))
+                    target_user = ban_entry.user
+
+                    await guild.unban(target_user, reason="Auto unbanned via Honeypot Trap Appeal panel.")
+                    await self.cog.bot.safe_send(
+                        target_user,
+                        content=server_link,
+                        embed=info(
+                            "You have been unbanned in Tortoise Community\n"
+                            "Please use the invite link to rejoin the server\n",
+                            self.cog.bot.user,
+                            "Ban Lifted!",
+                            "Welcome back to Tortoise Programming Community!",
+                        )
+                    )
+
+                    await self.cog.bot.progression_manager.set_ban_status(user_id=user.id,
+                                                                          guild_id=tortoise_guild_id,
+                                                                          status=False)
+
+                    await interaction.followup.send(f"✅ Successfully unbanned. You may rejoin!", ephemeral=True)
+
+                except discord.NotFound:
+                    await interaction.followup.send("You are not currently recorded on the server ban list.",
+                                                    ephemeral=True)
+                except discord.HTTPException:
+                    await interaction.followup.send(
+                        "❌ Something went wrong while attempting to unban. Try again later.", ephemeral=True)
+            else:
+                await interaction.followup.send(
+                    embed=failure(
+                        "Our records indicate you weren't banned by the automated bot trap.\nPlease select a different appeal reason."),
+                    ephemeral=True
+                )
+
+        else:
+            await interaction.edit_original_response(content="⏳ Processing your request and opening a ticket...",
+                                                     view=None)
+
+            try:
+                embed = info(
+                    f"Your ban appeal request is logged.\n"
+                    f"**Reason:** {chosen_reason}\n"
+                    "Please wait for a moderator to respond.\n\n",
+                    self.cog.bot.user,
+                    "Ticket Created!"
+                )
+                embed.set_footer(text="NOTE: Please remain in this server until this ticket is closed.")
+                await user.send(embed=embed)
+            except discord.HTTPException:
+                await interaction.followup.send(
+                    "❌ I couldn't send you a Direct Message. Please enable DMs from server members and try again.",
+                    ephemeral=True
+                )
+                return
+
+            await self.cog.create_mod_mail(user, reason=chosen_reason, source="panel", ping=False)
+
+
+class TicketReasonView(discord.ui.View):
+    """Temporary ephemeral view containing the reason dropdown."""
+
+    def __init__(self, cog: "TortoiseDM"):
+        super().__init__(timeout=60)
+        self.add_item(TicketReasonSelect(cog))
 
 
 class ModMailStartView(discord.ui.View):
@@ -45,29 +165,10 @@ class ModMailStartView(discord.ui.View):
         cog.cool_down.add_to_cool_down(user.id)
 
         await interaction.response.send_message(
-            "📩 Opening mod mail in your DMs...",
-            ephemeral=True,
-            delete_after=5,
+            "📩 Please select the reason for your ban appeal below:",
+            view=TicketReasonView(cog),
+            ephemeral=True
         )
-
-        try:
-            embed = info(
-                "Your ban appeal request is logged.\n"
-                "Please wait for a moderator to respond.\n\n",
-                user,
-                "Ticket Created!"
-            )
-            embed.set_footer(text="NOTE: Please remain in this server until this ticket is closed.")
-            await user.send(embed=embed)
-        except discord.HTTPException:
-            await interaction.followup.send(
-                "I couldn't DM you. Please enable DMs.",
-                ephemeral=True
-            )
-            return
-
-        await cog.create_mod_mail(user, source="panel")
-
 
 class NotifyButton(discord.ui.View):
     """Persistent button view for challenge notifications."""

@@ -31,6 +31,7 @@ class ProgressionManager:
                 messages INTEGER NOT NULL DEFAULT 0,
                 active BOOLEAN NOT NULL DEFAULT FALSE,
                 active_plus BOOLEAN NOT NULL DEFAULT FALSE,
+                auto_banned BOOLEAN NOT NULL DEFAULT FALSE,
                 PRIMARY KEY (guild_id, user_id)
             )
             """
@@ -50,6 +51,32 @@ class ProgressionManager:
             """
         )
 
+    async def set_ban_status(self, guild_id: int, user_id: int, status: bool):
+
+        await self.db.pool.execute(
+            """
+            INSERT INTO activity (guild_id, user_id, auto_banned)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (guild_id, user_id)
+            DO UPDATE
+            SET auto_banned = EXCLUDED.auto_banned
+            """,
+            guild_id,
+            user_id,
+            status,
+        )
+
+    async def is_auto_banned(self, guild_id: int, user_id: int) -> bool:
+
+        return await self.db.pool.fetchval(
+            """
+            SELECT auto_banned
+            FROM activity
+            WHERE guild_id = $1 AND user_id = $2
+            """,
+            guild_id,
+            user_id
+        ) or False
 
     async def add_messages_bulk(self, guild_id: int, cache: dict[int, int]):
 

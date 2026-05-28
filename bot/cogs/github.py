@@ -13,7 +13,7 @@ from bot.utils.embed_handler import project_embed
 
 STATIC_PROJECTS_DATA = [
     {
-        "name": "Tortoise-Bot",
+        "name": "tortoise-bot",
         "html_url": "https://github.com/Tortoise-Community/Tortoise-Bot",
         "web_link": "https://github.com/Tortoise-Community/Tortoise-Bot",
         "forks_count": 21,
@@ -24,7 +24,7 @@ STATIC_PROJECTS_DATA = [
         "short_desc": "Fully functional Bot for Discord coded in Discord.py",
     },
     {
-        "name": "Runtime-Bot",
+        "name": "runtime-bot",
         "html_url": "https://github.com/Tortoise-Community/Runtime-Bot",
         "web_link": "https://github.com/Tortoise-Community/Runtime-Bot",
         "forks_count": 1,
@@ -35,7 +35,7 @@ STATIC_PROJECTS_DATA = [
         "short_desc": "Discord bot for executing code directly in chat using the Hermes sandbox engine.",
     },
     {
-        "name": "Snappy-Bot",
+        "name": "snappy-bot",
         "html_url": "https://github.com/Tortoise-Community/Snappy-Bot",
         "web_link": "https://github.com/Tortoise-Community/Snappy-Bot",
         "forks_count": 1,
@@ -46,20 +46,20 @@ STATIC_PROJECTS_DATA = [
         "short_desc": "Snappy is a lightweight Discord bot built using discord.py v2+",
     },
     {
-        "name": "Backend",
-        "html_url": "https://github.com/Tortoise-Community/Backend",
-        "web_link": "https://github.com/Tortoise-Community/Backend",
+        "name": "site-backend",
+        "html_url": "https://github.com/Tortoise-Community/Site-Backend",
+        "web_link": "https://github.com/Tortoise-Community/Site-Backend",
         "forks_count": 1,
         "commit_count": 573,
         "stargazers_count": 8,
         "contributors_count": 0,
-        "language": "Python",
+        "language": "Django",
         "short_desc": "Website build with django for the Tortoise Community discord server",
     },
     {
-        "name": "Frontend",
-        "html_url": "https://github.com/Tortoise-Community/Frontend",
-        "web_link": "https://github.com/Tortoise-Community/Frontend",
+        "name": "site-frontend",
+        "html_url": "https://github.com/Tortoise-Community/Site-Frontend",
+        "web_link": "https://github.com/Tortoise-Community/Site-Frontend",
         "forks_count": 1,
         "commit_count": 119,
         "stargazers_count": 1,
@@ -68,15 +68,15 @@ STATIC_PROJECTS_DATA = [
         "short_desc": "Web frontend built with React for Tortoise Community discord server",
     },
     {
-        "name": "BladeList",
-        "html_url": "https://github.com/Bladelist/Bladelist",
-        "web_link": "https://github.com/Bladelist/Bladelist",
+        "name": "code-studio",
+        "html_url": "https://github.com/Tortoise-Community/Code-Studio",
+        "web_link": "https://github.com/Tortoise-Community/Code-Studio",
         "forks_count": 7,
         "commit_count": 290,
         "stargazers_count": 9,
         "contributors_count": 0,
-        "language": "Django",
-        "short_desc": "An open-source Discord Bot and Server Listing site built with Django.",
+        "language": "React",
+        "short_desc": "An open-source platform for practising DSA with community-driven resources",
     },
 ]
 

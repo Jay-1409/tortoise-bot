@@ -634,7 +634,7 @@ class TortoiseDM(commands.Cog):
         except Exception:
             pass
 
-    async def create_mod_mail(self, user: discord.User, reason: str = "No reason provided.", source: str = "dm"):
+    async def create_mod_mail(self, user: discord.User, reason: str = "No reason provided.", source: str = "dm", ping=True):
         if user.id in self.pending_mod_mails:
             try:
                 await user.send(embed=failure("You already have a pending mod mail, please be patient."))
@@ -654,7 +654,7 @@ class TortoiseDM(commands.Cog):
         view = ModMailAcceptView(self, user.id)
 
         msg = await self.staff_channel.send(
-            self.mod_mail_ping_role.mention,
+            self.mod_mail_ping_role.mention if ping else None,
             embed=submission_embed,
             view=view
         )
