@@ -6,10 +6,10 @@ from discord import app_commands
 
 from bot.constants import (
     challenger_role_id, accepting_team_invites_role_id, tortoise_guild_id,
-    join_a_team_channel_id, teams_dashboard_message_id, server_link
+    join_a_team_channel_id, teams_dashboard_message_id, server_link, bot_avatar_url
 )
 from bot.utils.checks import tortoise_bot_developer_only
-from bot.utils.embed_handler import info, failure
+from bot.utils.embed_handler import info, failure, success
 
 
 class TicketReasonSelect(discord.ui.Select):
@@ -310,7 +310,11 @@ class ButtonUtility(commands.Cog):
         description="Post the mod mail contact panel."
     )
     @app_commands.check(tortoise_bot_developer_only)
-    async def post_panel(self, interaction: discord.Interaction):
+    async def post_panel(self, interaction: discord.Interaction, channel_id: int):
+
+        channel = interaction.guild.get_channel(channel_id)
+
+        await channel.purge(limit=1)
 
         embed = discord.Embed(
             title="Ban appeal",
@@ -318,11 +322,14 @@ class ButtonUtility(commands.Cog):
             color=discord.Color.dark_green()
         )
 
-        embed.set_footer(text="Tortoise Programming Community", icon_url=self.bot.user.avatar.url)
+        embed.set_footer(text="Tortoise Programming Community", icon_url=bot_avatar_url)
 
-        await interaction.response.send_message(
+        await channel.send(
             embed=embed,
             view=ModMailStartView()
+        )
+        await interaction.response.send_message(
+            embed=success("Done")
         )
 
     @app_commands.command(

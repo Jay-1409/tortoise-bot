@@ -23,6 +23,7 @@ server_link = "https://discord.com/invite/Ex8xeWD"
 online_compiler_link = "https://execute.tortoisecommunity.org"
 runtime_bot_link = "https://runtime-bot.tortoisecommunity.org"
 online_viewer_url = "https://viewer.tortoisecommunity.org"
+bot_avatar_url = "https://lairesit.sirv.com/Tortoise/tortoise.png"
 
 # Channel IDs
 welcome_channel_id = 738731842538176522
