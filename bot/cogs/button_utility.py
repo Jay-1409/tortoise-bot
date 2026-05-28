@@ -310,9 +310,15 @@ class ButtonUtility(commands.Cog):
         description="Post the mod mail contact panel."
     )
     @app_commands.check(tortoise_bot_developer_only)
-    async def post_panel(self, interaction: discord.Interaction, channel_id: int):
+    async def post_panel(self, interaction: discord.Interaction, channel_id: str):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            target_id = int(channel_id)
+        except ValueError:
+            await interaction.followup.send("❌ Please provide a valid numerical Channel ID.", ephemeral=True)
+            return
 
-        channel = interaction.guild.get_channel(channel_id)
+        channel = interaction.guild.get_channel(target_id)
 
         await channel.purge(limit=1)
 
@@ -328,7 +334,7 @@ class ButtonUtility(commands.Cog):
             embed=embed,
             view=ModMailStartView()
         )
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embed=success("Done")
         )
 
