@@ -955,6 +955,7 @@ class TeamCog(commands.Cog):
         leader_display = leader_instance.mention if leader_instance else f"Unknown User (`{team['leader_id']}`)"
 
         member_mentions = []
+        members_left = []
         for row in db_members:
             user_id = row["user_id"]
             if user_id == team["leader_id"]:
@@ -964,7 +965,7 @@ class TeamCog(commands.Cog):
             if member_m:
                 member_mentions.append(f"`{member_m.display_name}`")
             else:
-                member_mentions.append(f"Unknown User (`{user_id}`)")
+                members_left.append(user_id)
 
         members_display = "\n".join(member_mentions) if member_mentions else "*No other members have joined yet.*"
 
@@ -974,6 +975,12 @@ class TeamCog(commands.Cog):
             self.bot.user,
             f"Team Profile: {team['name']}"
         )
+
+        if members_left:
+            try:
+                await self.team.remove_members_bulk(team["team_id"], members_left)
+            except Exception:
+                pass
 
         return await interaction.followup.send(embed=embed)
 
