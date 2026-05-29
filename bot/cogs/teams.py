@@ -10,7 +10,10 @@ from bot.constants import (
 from bot.utils.embed_handler import success, failure, warning, info, authored_sm
 from bot.utils.checks import tortoise_bot_developer_only
 
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from bot.bot import Bot
 
 class CreateTeamModal(discord.ui.Modal, title="Create Team"):
 
@@ -232,7 +235,7 @@ class PersistentJoinRequestView(discord.ui.View):
         style=discord.ButtonStyle.blurple,
         custom_id="team_request_join_start"
     )
-    async def request_join(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def request_join(self, interaction: discord.Interaction, button: discord.ui.Button): # noqa
         existing = await self.cog.team.get_user_team(interaction.guild.id, interaction.user.id)
         if existing:
             return await interaction.response.send_message(
@@ -246,7 +249,7 @@ class PersistentJoinRequestView(discord.ui.View):
             )
 
         view = TeamSelectionView(self.cog, teams)
-        await interaction.response.send_message(
+        return await interaction.response.send_message(
             "Select a team you wish to join:", view=view, ephemeral=True
         )
 
@@ -314,7 +317,7 @@ class JoinReasonModal(discord.ui.Modal, title="Join Team Reason"):
 class TeamCog(commands.Cog):
     team_group = app_commands.Group(name="team", description="All management commands related to teams.")
 
-    def __init__(self, bot):
+    def __init__(self, bot: "Bot"):
         self.bot = bot
         self.team = bot.team_manager
         self.log_channel = None
@@ -447,7 +450,7 @@ class TeamCog(commands.Cog):
                 ephemeral=True
             )
 
-        await interaction.response.send_modal(
+        return await interaction.response.send_modal(
             CreateTeamModal(self, guild.id, invite_id)
         )
 
@@ -527,7 +530,7 @@ class TeamCog(commands.Cog):
 
         await msg.edit(view=view)
 
-        await interaction.followup.send(
+        return await interaction.followup.send(
             embed=success("Setup invite sent."),
             ephemeral=True
         )
@@ -557,7 +560,7 @@ class TeamCog(commands.Cog):
         )
         await self.update_dashboard(guild)
 
-        await interaction.followup.send(embed=success("Team deleted successfully."), ephemeral=True)
+        return await interaction.followup.send(embed=success("Team deleted successfully."), ephemeral=True)
 
 
     @team_group.command(name="invite")
@@ -752,7 +755,7 @@ class TeamCog(commands.Cog):
         if not success_flag:
             return await interaction.followup.send(embed=failure(err))
 
-        await interaction.followup.send(
+        return await interaction.followup.send(
             embed=success(f"{member.mention} removed from team.")
         )
 
@@ -792,7 +795,7 @@ class TeamCog(commands.Cog):
         if not success_flag:
             return await interaction.followup.send(embed=failure(err))
 
-        await interaction.followup.send(
+        return await interaction.followup.send(
             embed=success("You left the team.")
         )
 
@@ -952,6 +955,7 @@ class TeamCog(commands.Cog):
         leader_display = leader_instance.mention if leader_instance else f"Unknown User (`{team['leader_id']}`)"
 
         member_mentions = []
+        members_left = []
         for row in db_members:
             user_id = row["user_id"]
             if user_id == team["leader_id"]:
@@ -961,7 +965,7 @@ class TeamCog(commands.Cog):
             if member_m:
                 member_mentions.append(f"`{member_m.display_name}`")
             else:
-                member_mentions.append(f"Unknown User (`{user_id}`)")
+                members_left.append(user_id)
 
         members_display = "\n".join(member_mentions) if member_mentions else "*No other members have joined yet.*"
 
@@ -971,6 +975,12 @@ class TeamCog(commands.Cog):
             self.bot.user,
             f"Team Profile: {team['name']}"
         )
+
+        if members_left:
+            try:
+                await self.team.remove_members_bulk(team["team_id"], members_left)
+            except Exception:
+                pass
 
         return await interaction.followup.send(embed=embed)
 

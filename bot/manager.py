@@ -31,6 +31,7 @@ class ProgressionManager:
                 messages INTEGER NOT NULL DEFAULT 0,
                 active BOOLEAN NOT NULL DEFAULT FALSE,
                 active_plus BOOLEAN NOT NULL DEFAULT FALSE,
+                auto_banned BOOLEAN NOT NULL DEFAULT FALSE,
                 PRIMARY KEY (guild_id, user_id)
             )
             """
@@ -50,6 +51,32 @@ class ProgressionManager:
             """
         )
 
+    async def set_ban_status(self, guild_id: int, user_id: int, status: bool):
+
+        await self.db.pool.execute(
+            """
+            INSERT INTO activity (guild_id, user_id, auto_banned)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (guild_id, user_id)
+            DO UPDATE
+            SET auto_banned = EXCLUDED.auto_banned
+            """,
+            guild_id,
+            user_id,
+            status,
+        )
+
+    async def is_auto_banned(self, guild_id: int, user_id: int) -> bool:
+
+        return await self.db.pool.fetchval(
+            """
+            SELECT auto_banned
+            FROM activity
+            WHERE guild_id = $1 AND user_id = $2
+            """,
+            guild_id,
+            user_id
+        ) or False
 
     async def add_messages_bulk(self, guild_id: int, cache: dict[int, int]):
 
@@ -597,6 +624,19 @@ class TeamManager:
             WHERE team_id=$1 AND user_id=$2
         """, team_id, user_id)
 
+    async def remove_members_bulk(self, team_id: int, user_ids: list[int]):
+        if not user_ids:
+            return
+
+        await self.db.pool.execute(
+            """
+            DELETE FROM team_members
+            WHERE team_id = $1 AND user_id = ANY($2)
+            """,
+            team_id,
+            user_ids
+        )
+
     async def get_user_team(self, guild_id: int, user_id: int):
         return await self.db.pool.fetchrow("""
             SELECT * FROM team_members
@@ -661,6 +701,7 @@ class TeamManager:
             SELECT user_id
             FROM team_members
             WHERE team_id=$1
+            ORDER BY joined_at ASC
         """, team_id)
 
     async def create_join_request(self, guild_id: int, team_id: int, user_id: int, reason: str = None) -> bool:

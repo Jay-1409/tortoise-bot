@@ -125,9 +125,9 @@ class Bot(commands.Bot):
             embed = simple_embed(message=f"Build version: [{commit_hash}]({github_repo_link}/commit/{commit_hash})",
                                  title="")
             embed.set_footer(text=commit_message)
-            await self.sys_log_channel.send(
-                embed=embed,
-            )
+            # await self.sys_log_channel.send(
+            #     embed=embed,
+            # )
         except discord.Forbidden:
             pass
 

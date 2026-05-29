@@ -145,6 +145,11 @@ class AntiRaidSpam(commands.Cog):
                 reason=self.BOT_TRAP_BAN_REASON,
                 delete_message_days=1,
             )
+            await self.bot.progression_manager.set_ban_status(
+                user_id=member.id,
+                guild_id=guild.id,
+                status=True
+            )
         except discord.Forbidden:
             return
 
