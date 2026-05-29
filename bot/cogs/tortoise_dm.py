@@ -27,6 +27,64 @@ class UnsupportedFileEncoding(ValueError):
     pass
 
 
+class StaffApplicationModal(discord.ui.Modal, title="Staff Application"):
+    name_input = discord.ui.TextInput(
+        label="Your Name",
+        placeholder="e.g. John Doe",
+        min_length=2, max_length=100,
+        required=True
+    )
+    role_input = discord.ui.TextInput(
+        label="Role Applying For",
+        placeholder="e.g. Moderator, Jr Moderator, Manager",
+        min_length=3, max_length=100,
+        required=True
+    )
+    timezone_input = discord.ui.TextInput(
+        label="Your Timezone",
+        placeholder="e.g. UTC, EST, Asia/Kolkata",
+        min_length=2, max_length=50,
+        required=True
+    )
+    reason_input = discord.ui.Label(
+        text="Tell us about yourself.",
+        description=(
+            "Why are you a good fit, any prior experience?"
+        ),
+        component=discord.ui.TextInput(
+            style=discord.TextStyle.long,
+            min_length=10,
+            max_length=1024,
+            required=True,
+            placeholder="Why should we select you over other candidates?"
+        )
+    )
+
+    def __init__(self, cog: "TortoiseDM"):
+        super().__init__()
+        self.cog = cog
+
+    async def on_submit(self, interaction: discord.Interaction):
+        user = interaction.user
+        await interaction.response.defer(ephemeral=True)
+
+        formatted_submission = (
+            f"**Name:** {self.name_input.value}\n"
+            f"**Role:** {self.role_input.value}\n"
+            f"**Timezone:** {self.timezone_input.value}\n\n"
+            f"**About:**\n{self.reason_input.component.value}\n\n"
+        )
+
+        await self.cog.staff_applications_channel.send(embed=info(
+            f"User {user.mention} submitted staff application:\n\n{formatted_submission}",
+            self.cog.bot.user, "Staff Application", f"ID: {user.id}"
+        ))
+
+        await interaction.followup.send(
+            embed=success("Staff application successfully submitted. Thank you!"),
+            ephemeral=True
+        )
+
 class ModMailReasonModal(discord.ui.Modal, title="Contact Staff (Mod Mail)"):
     reason = discord.ui.Label(
         text="Reason for contacting staff",
@@ -150,6 +208,14 @@ class DMInitButton(discord.ui.Button):
 
         if self.label == "Contact staff (Mod Mail)":
             await interaction.response.send_modal(ModMailReasonModal(cog))
+            if interaction.message:
+                view = self.view
+                view.clear_items()
+                await interaction.message.edit(view=view)
+            return
+
+        if self.label == "Staff Application":
+            await interaction.response.send_modal(StaffApplicationModal(cog))
             if interaction.message:
                 view = self.view
                 view.clear_items()
@@ -688,31 +754,7 @@ class TortoiseDM(commands.Cog):
         self.active_event_submissions.remove(user.id)
 
     async def create_staff_application(self, user: discord.User):
-        submission_format = ("```ex\n"
-                             "Name: Your name.\n"
-                             "Role: The role you are apply for.\n"
-                             "Timezone: Your timezone. \n"
-                             "About:  Tell us a bit about yourself.\n"
-                             "Reason:  Why are you a good fit for this role??```\n"
-                             "**Other details (Optional)** \n"
-                             " - How long are you active on discord per day.\n"
-                             " - When did you join discord. \n"
-                             " - Any previous experience.")
-
-        user_reply = await self._get_user_reply(
-            self.active_staff_applications,
-            user, "Staff Application",
-            submission_format
-        )
-        if user_reply is None:
-            return
-
-        await self.staff_applications_channel.send(embed=info(
-            f"User {user.mention} submitted staff application: \n"
-            f"{user_reply}", self.bot.user, "Staff Application", f"ID: {user.id}")
-        )
-        await user.send(embed=success("Staff application successfully submitted."))
-        self.active_staff_applications.remove(user.id)
+        pass
 
     async def create_bug_report(self, user: discord.User):
         user_reply = await self._get_user_reply(self.active_bug_reports, user, "Bug Report")
