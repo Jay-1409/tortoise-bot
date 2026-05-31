@@ -74,6 +74,8 @@ challenger_role_id = 781210603997757471
 wizard_role_id = 1472794198053879809
 contributor_role_id = 649630145304461312
 accepting_team_invites_role_id = 1488893079053144184
+jr_moderator_role_id = 1510378507450974351
+
 
 active_role_id = 1482843939978481889
 active_plus_role_id = 1482844032488050921
@@ -130,7 +132,15 @@ promotable_roles = {
     contributor_role_id:  "This role recognizes members who actively contribute to our **GitHub repositories** "
                          "through code, improvements, bug fixes, or other development efforts.\n\n"
                          "Your work helps strengthen our projects and supports the wider **open-source community**.\n\n"
-                         "Thank you for contributing and helping move the project forward!"
+                         "Thank you for contributing and helping move the project forward!",
+    jr_moderator_role_id: "This is a **trial staff role** for members stepping into moderation.\n\n"
+                          "As a **Junior Moderator**, you’ll help keep the server clean, assist members, "
+                          "and get hands-on experience with how moderation works.\n\n"
+                          "This is the **3rd highest role in the staff hierarchy** and lasts for about "
+                          "**1 month**.\n\n"
+                          "Do well during this period, make fair decisions, and help the community "
+                          "and you can be promoted to **Moderator**.\n\n"
+                          "Take initiative, be approachable, and set a good example."
 
 }
 
