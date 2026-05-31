@@ -10,7 +10,7 @@ from discord.ext import commands
 from discord import app_commands
 
 from bot.utils.embed_handler import info, warning, success
-from bot.utils.checks import check_if_tortoise_staff
+from bot.utils.checks import check_if_tortoise_mod
 
 
 class QuestionModal(discord.ui.Modal, title='Add Question'):
@@ -214,7 +214,7 @@ class Giveaway(commands.Cog):
 
     @app_commands.command(name='giveaway_create', description='Start a new giveaway')
     @app_commands.describe(duration_minutes="How long the giveaway lasts", winners="Number of winners to pick")
-    @app_commands.check(check_if_tortoise_staff)
+    @app_commands.check(check_if_tortoise_mod)
     async def giveaway_create(
             self,
             interaction: discord.Interaction,

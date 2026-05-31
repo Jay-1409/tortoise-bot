@@ -6,7 +6,7 @@ from discord import app_commands
 
 from bot import constants
 from bot.utils.embed_handler import info, success, failure
-from bot.utils.checks import check_if_tortoise_staff
+from bot.utils.checks import check_if_tortoise_mod
 
 
 class RoleProgression(commands.Cog):
@@ -285,7 +285,7 @@ class RoleProgression(commands.Cog):
 
     @app_commands.command()
     @app_commands.checks.bot_has_permissions(manage_roles=True)
-    @app_commands.check(check_if_tortoise_staff)
+    @app_commands.check(check_if_tortoise_mod)
     async def promote(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role):
         """Promote member to role."""
         if role.id not in constants.promotable_roles:
