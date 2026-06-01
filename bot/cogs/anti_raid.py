@@ -66,6 +66,11 @@ class AntiRaidSpam(commands.Cog):
                 [(now, message.channel.id, "[Mentioned @everyone]", message.id)],
             )
             self.message_log[guild.id].pop(member.id, None)
+            await self.bot.progression_manager.set_ban_status(
+                user_id=member.id,
+                guild_id=guild.id,
+                status=True
+            )
             return
 
         # BAIT CHANNEL: IMMEDIATE BAN
@@ -143,7 +148,7 @@ class AntiRaidSpam(commands.Cog):
             await guild.ban(
                 member,
                 reason=self.BOT_TRAP_BAN_REASON,
-                delete_message_days=1,
+                delete_message_seconds=65
             )
             await self.bot.progression_manager.set_ban_status(
                 user_id=member.id,
@@ -174,7 +179,7 @@ class AntiRaidSpam(commands.Cog):
             await guild.ban(
                 member,
                 reason=self.BAN_REASON,
-                delete_message_days=1,
+                delete_message_seconds=65,
             )
         except discord.Forbidden:
             return

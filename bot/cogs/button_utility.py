@@ -19,9 +19,15 @@ class TicketReasonSelect(discord.ui.Select):
         options = [
             discord.SelectOption(
                 label="Accidentally Selected 'I am Bot' Option",
-                value="accidental_trap_victim",
+                value="accidental_trap_option_victim",
                 description="I accidentally selected 'I am Bot' option while joining.",
-                emoji="🤖"
+                emoji="<:pepebot:1510994481309155388>"
+            ),
+            discord.SelectOption(
+                label="Accidentally Sent Message in '#do-not-send-message' Channel",
+                value="accidental_trap_channel_victim",
+                description="I accidentally sent a message in the bot trap channel.",
+                emoji="<:pepe_with_gun2:731169353533227108>"
             ),
             discord.SelectOption(label="Unfair Ban", value="unfair_ban", description="I feel my ban was unjust.",
                                  emoji="⚖️"),
@@ -45,7 +51,8 @@ class TicketReasonSelect(discord.ui.Select):
         reason = self.values[0]
 
         reason_mappings = {
-            "accidental_trap_victim": "Accidentally Selected 'I am Bot' Option",
+            "accidental_trap_option_victim": "Accidentally Selected 'I am Bot' Option",
+            "accidental_trap_channel_victim": "Accidentally Sent Message in '#do-not-send-message' Channel",
             "unfair_ban": "Unfair Ban Appeal",
             "apology": "Apology / Second Chance Request",
             "compromised": "Compromised Account Appeal",
@@ -55,7 +62,7 @@ class TicketReasonSelect(discord.ui.Select):
 
         self.disabled = True
 
-        if reason == "accidental_trap_victim":
+        if reason == "accidental_trap_option_victim" or reason == "accidental_trap_channel_victim":
             await interaction.response.edit_message(view=self.view)
 
             is_banned = await self.cog.bot.progression_manager.is_auto_banned(user_id=user.id,

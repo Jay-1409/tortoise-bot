@@ -582,7 +582,7 @@ class TortoiseDM(commands.Cog):
         destination_id = self.active_mod_mails.get(user.id)
         if destination_id is None:
             # If it's None there is no user with that ID that has opened mod mail request.
-            # However we can still have the mod/admin that could be attending mod mail
+            # However, we can still have the mod/admin that could be attending mod mail
             destination_id = self._get_dict_key_by_value(user.id)
 
             if destination_id is None:
