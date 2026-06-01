@@ -82,6 +82,14 @@ class RoleProgression(commands.Cog):
     def active_plus_role(self):
         return self.role(constants.active_plus_role_id)
 
+    @property
+    def chronically_online_role(self):
+        return self.role(constants.chronically_online_role_id)
+
+    @property
+    def needs_to_touch_grass_role(self):
+        return self.role(constants.needs_to_touch_grass_role_id)
+
 
     @tasks.loop(minutes=5)
     async def flush_cache(self):
@@ -145,7 +153,6 @@ class RoleProgression(commands.Cog):
                 await member.add_roles(self.active_plus_role)
                 await asyncio.sleep(0.5)
 
-                # Remove previous role
                 if self.active_role in member.roles:
                     await member.remove_roles(self.active_role)
                     await asyncio.sleep(0.5)
@@ -166,6 +173,45 @@ class RoleProgression(commands.Cog):
 
                 await self.log_channel.send(
                     embed=info(f"{member.mention} reached **Active+** milestone.", self.bot.user, "")
+                )
+
+    # @tasks.loop(hours=24)
+    async def other_progression_role_check(self):
+
+        if not self.guild:
+            return
+
+        for user_id in await self.db.get_chronically_online_users(self.guild.id):
+
+            member = self.guild.get_member(user_id)
+
+            if member and self.chronically_online_role not in member.roles:
+                await member.add_roles(self.chronically_online_role)
+                await asyncio.sleep(0.5)
+
+                if self.active_plus_role in member.roles:
+                    await member.remove_roles(self.active_plus_role)
+                    await asyncio.sleep(0.5)
+
+                await self.db.mark_active_plus(self.guild.id, user_id)
+
+                try:
+                    await member.send(
+                        embed=info(
+                            "You have earned the **Chronically Online** badge.\n" + constants.automatically_assigned_roles[
+                                self.chronically_online_role.id],
+                            self.bot.user,
+                            "Well Done 🌟",
+                            "This badge is issued only to the chronically online folks!")
+                    )
+                except discord.Forbidden:
+                    pass
+
+                await self.log_channel.send(
+                    embed=info(
+                        f"{member.mention} reached **Chronically Online+** milestone.",
+                        self.bot.user, ""
+                    )
                 )
 
     @active_role_check.before_loop
