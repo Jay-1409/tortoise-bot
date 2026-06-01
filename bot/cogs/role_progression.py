@@ -24,11 +24,13 @@ class RoleProgression(commands.Cog):
         self.flush_cache.start()
         self.active_role_check.start()
         self.active_plus_role_check.start()
+        self.other_progression_role_check.start()
 
     def cog_unload(self):
         self.flush_cache.cancel()
         self.active_role_check.cancel()
         self.active_plus_role_check.cancel()
+        self.other_progression_role_check.cancel()
 
 
     def role(self, role_id):
@@ -121,7 +123,7 @@ class RoleProgression(commands.Cog):
             if member and self.active_role not in member.roles:
                 await member.add_roles(self.active_role)
                 await asyncio.sleep(0.5)
-                await self.db.mark_active(self.guild.id, user_id)
+                await self.db.set_field_value(self.guild.id, user_id, "active", True)
 
                 try:
                     await member.send(
@@ -157,7 +159,7 @@ class RoleProgression(commands.Cog):
                     await member.remove_roles(self.active_role)
                     await asyncio.sleep(0.5)
 
-                await self.db.mark_active_plus(self.guild.id, user_id)
+                await self.db.set_field_value(self.guild.id, user_id, "active_plus", True)
 
                 try:
                     await member.send(
@@ -175,7 +177,7 @@ class RoleProgression(commands.Cog):
                     embed=info(f"{member.mention} reached **Active+** milestone.", self.bot.user, "")
                 )
 
-    # @tasks.loop(hours=24)
+    @tasks.loop(hours=24)
     async def other_progression_role_check(self):
 
         if not self.guild:
@@ -193,7 +195,7 @@ class RoleProgression(commands.Cog):
                     await member.remove_roles(self.active_plus_role)
                     await asyncio.sleep(0.5)
 
-                await self.db.mark_active_plus(self.guild.id, user_id)
+                await self.db.set_field_value(self.guild.id, user_id, "chronically_online", True)
 
                 try:
                     await member.send(

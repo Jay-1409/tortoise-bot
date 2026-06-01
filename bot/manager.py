@@ -31,6 +31,8 @@ class ProgressionManager:
                 messages INTEGER NOT NULL DEFAULT 0,
                 active BOOLEAN NOT NULL DEFAULT FALSE,
                 active_plus BOOLEAN NOT NULL DEFAULT FALSE,
+                chronically_online BOOLEAN NOT NULL DEFAULT FALSE,
+                touched_grass BOOLEAN NOT NULL DEFAULT FALSE,
                 auto_banned BOOLEAN NOT NULL DEFAULT FALSE,
                 PRIMARY KEY (guild_id, user_id)
             )
@@ -138,29 +140,21 @@ class ProgressionManager:
             amounts
         )
 
+    async def set_field_value(self, guild_id: int, user_id: int, field_name: str, value: bool):
+        allowed_fields = {"active", "active_plus", "chronically_online", "touched_grass", "auto_banned"}
+        if field_name not in allowed_fields:
+            raise ValueError(f"Unauthorized database column update attempt: {field_name}")
 
-    async def mark_active(self, guild_id: int, user_id: int):
         await self.db.pool.execute(
-            """
+            f"""
             UPDATE activity
-            SET active = TRUE
-            WHERE guild_id=$1 AND user_id=$2
+            SET {field_name} = $3
+            WHERE guild_id = $1 AND user_id = $2
             """,
             guild_id,
-            user_id
+            user_id,
+            value
         )
-
-    async def mark_active_plus(self, guild_id: int, user_id: int):
-        await self.db.pool.execute(
-            """
-            UPDATE activity
-            SET active_plus = TRUE
-            WHERE guild_id=$1 AND user_id=$2
-            """,
-            guild_id,
-            user_id
-        )
-
 
     async def get_messages(self, guild_id: int, user_id: int) -> int:
 
