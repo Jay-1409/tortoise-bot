@@ -200,6 +200,34 @@ class ProgressionManager:
          )
          return [r["user_id"] for r in rows]
 
+    async def get_chronically_online_users(self, guild_id: int) -> list[int]:
+         rows = await self.db.pool.fetch(
+            """
+            SELECT user_id
+            FROM activity
+            WHERE guild_id=$1
+            AND active_plus=TRUE
+            AND chronically_online=FALSE
+            AND messages >= 2500
+            """,
+            guild_id
+         )
+         return [r["user_id"] for r in rows]
+
+    async def get_users_who_needs_to_touch_grass(self, guild_id: int) -> list[int]:
+         rows = await self.db.pool.fetch(
+            """
+            SELECT user_id
+            FROM activity
+            WHERE guild_id=$1
+            AND chronically_online=TRUE
+            AND touch_grass=FALSE
+            AND messages >= 5000
+            """,
+            guild_id
+         )
+         return [r["user_id"] for r in rows]
+
 
     async def add_nomination(
         self,
