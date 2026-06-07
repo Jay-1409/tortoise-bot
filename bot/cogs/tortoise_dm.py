@@ -243,7 +243,11 @@ class ModMailAcceptView(discord.ui.View):
         mod = interaction.user
         user_id = self.user_id
 
-        if not any(role in mod.roles for role in (self.cog.admin_role, self.cog.moderator_role)):
+        if not any(role in mod.roles for role in (
+                self.cog.admin_role,
+                self.cog.moderator_role,
+                self.cog.jr_moderator_role
+        )):
             await interaction.response.send_message("No permission.", ephemeral=True)
             return
 
@@ -423,6 +427,7 @@ class TortoiseDM(commands.Cog):
         self._ban_appeal_guild = None
         self._admin_role = None
         self._moderator_role = None
+        self._jr_moderator_role = None
         self._mod_mail_ping_role = None
         self.cool_down = CoolDown(seconds=120)
         self.bot.loop.create_task(self.cool_down.start())
@@ -514,6 +519,12 @@ class TortoiseDM(commands.Cog):
         if self._moderator_role is None:
             self._moderator_role = self.tortoise_guild.get_role(constants.moderator_role_id)
         return self._moderator_role
+
+    @property
+    def jr_moderator_role(self):
+        if self._jr_moderator_role is None:
+            self._jr_moderator_role = self.tortoise_guild.get_role(constants.jr_moderator_role_id)
+        return self._jr_moderator_role
 
     @property
     def mod_mail_ping_role(self):
