@@ -85,6 +85,77 @@ class StaffApplicationModal(discord.ui.Modal, title="Staff Application"):
             ephemeral=True
         )
 
+
+class ModMailCloseReasonModal(discord.ui.Modal, title="Close Mod Mail with Response"):
+    response_input = discord.ui.TextInput(
+        label="Reason for closing",
+        style=discord.TextStyle.long,
+        placeholder="Type the response that will be sent to the user's DMs...",
+        min_length=1,
+        max_length=1024,
+        required=True
+    )
+
+    def __init__(self, cog: "TortoiseDM", user_id: int, staff_msg: discord.Message):
+        super().__init__()
+        self.cog = cog
+        self.user_id = user_id
+        self.staff_msg = staff_msg
+
+    async def on_submit(self, interaction: discord.Interaction):
+        mod = interaction.user
+        user_id = self.user_id
+        staff_response = self.response_input.value
+
+        if user_id not in self.cog.pending_mod_mails:
+            await interaction.response.send_message("This mod mail is no longer pending.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        user = self.cog.bot.get_user(user_id)
+
+        if user:
+            try:
+                dm_embed = info(
+                    f"Your mod mail thread has been marked as completed by staff.\n\n"
+                    f"**Staff Response:**\n{staff_response}\n\n"
+                    f"-# If you are not satisfied with the response, Please initiate a new mod mail.\n",
+                    self.cog.bot.user,
+                    "Mod Mail Closed"
+                )
+                dm_embed.set_footer(text="Tortoise Programming Community")
+                await user.send(embed=dm_embed)
+            except discord.HTTPException:
+                pass
+
+        from bot.utils.message_logger import MessageLogger
+        from io import StringIO
+
+        log = MessageLogger(mod.id, user_id)
+        log.add_embed(
+            info(f"Mod Mail closed via dynamic staff action.\n"
+                 f"Staff Response: {staff_response}", mod, "Direct Closure"))
+
+        logs = await self.cog.mod_mail_report_channel.send(
+            file=discord.File(StringIO(str(log)), filename=f"closed_with_response_{user_id}.txt")
+        )
+
+        self.cog.pending_mod_mails.remove(user_id)
+        if user_id in self.cog.modmail_messages:
+            del self.cog.modmail_messages[user_id]
+
+        self.clear_items()
+
+        await self.cog.update_staff_embed_from_message(
+            self.staff_msg,
+            description=f"{logs.jump_url}",
+            footer_append=f"☑️ Accepted by {mod}\n\n🔒 Resolved with response.",
+            color=discord.Color.dark_grey(),
+        )
+
+        await interaction.followup.send(embed=success("Closed and response sent successfully."), ephemeral=True)
+
 class ModMailReasonModal(discord.ui.Modal, title="Contact Staff (Mod Mail)"):
     reason = discord.ui.Label(
         text="Reason for contacting staff",
@@ -416,6 +487,25 @@ class ModMailAcceptView(discord.ui.View):
                         await mod.send(embed=dm_closed_embed)
                     except discord.HTTPException:
                         pass
+
+    @discord.ui.button(label="Resolve with Reason", style=discord.ButtonStyle.blurple, custom_id="close_modmail_reason_btn")
+    async def close_with_reason(self, interaction: discord.Interaction, button: discord.ui.Button):
+        mod = interaction.user
+        user_id = self.user_id
+
+        if not any(role in mod.roles for role in (
+                self.cog.admin_role,
+                self.cog.moderator_role,
+                self.cog.jr_moderator_role
+        )):
+            await interaction.response.send_message("No permission.", ephemeral=True)
+            return
+
+        if user_id not in self.cog.pending_mod_mails:
+            await interaction.response.send_message("This mod mail request is no longer pending.", ephemeral=True)
+            return
+
+        await interaction.response.send_modal(ModMailCloseReasonModal(self.cog, user_id, interaction.message))
 
 
 class TortoiseDM(commands.Cog):
