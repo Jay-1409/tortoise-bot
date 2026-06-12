@@ -87,12 +87,17 @@ class TicketReasonSelect(discord.ui.Select):
                             "Welcome back to Tortoise Programming Community!",
                         )
                     )
+                    await self.cog.bot.log(
+                        embed=info(
+                            f"`{target_user}` just unbanned themselves via appeal.", self.cog.bot.user, ""
+                        )
+                    )
 
                     await self.cog.bot.progression_manager.set_ban_status(user_id=user.id,
                                                                           guild_id=tortoise_guild_id,
                                                                           status=False)
 
-                    await interaction.followup.send(f"✅ Successfully unbanned. You may rejoin!", ephemeral=True)
+                    await interaction.followup.send(f"✅ Successfully unbanned. You may rejoin!\n\n{server_link}", ephemeral=True)
 
                 except discord.NotFound:
                     await interaction.followup.send("You are not currently recorded on the server ban list.",

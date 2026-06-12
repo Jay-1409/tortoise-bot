@@ -131,6 +131,14 @@ class Bot(commands.Bot):
         except discord.Forbidden:
             pass
 
+    async def log(self, content: str, embed: discord.Embed) -> bool:
+        try:
+            await self.sys_log_channel.send(content=content, embed=embed)
+            return True
+        except (discord.Forbidden, discord.HTTPException):
+            return False
+
+
     @staticmethod
     async def safe_send(
             target: Messageable,

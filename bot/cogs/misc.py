@@ -11,6 +11,136 @@ from bot.utils.embed_handler import info
 from bot.constants import embed_space
 
 
+class TagDropdown(discord.ui.Select):
+    def __init__(self, bot, cog_instance):
+        self.bot = bot
+        self.cog_instance = cog_instance
+        options = [
+            discord.SelectOption(label="Ask", value="ask", description="Don't ask to ask, just ask."),
+            discord.SelectOption(label="Markdown", value="markdown", description="Show how to format code using markdown."),
+            discord.SelectOption(label="Run Help", value="run_help", description="Show how to run code with the execution bot."),
+            discord.SelectOption(label="Zen", value="zen", description="The Zen of Python, by Tim Peters."),
+            discord.SelectOption(label="Add to Issues", value="add_to_issues", description="ADD TO ISSUES banner.")
+        ]
+        super().__init__(placeholder="Choose a tag to display...", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        value = self.values[0]
+
+        if value == "ask":
+            content = (
+                "Don't ask to ask, just ask.\n\n"
+                " • You will have much higher chances of getting an answer\n"
+                " • We can skip the whole process of actually getting the question out of you thus you will get "
+                "answer faster\n\n"
+                "For more info visit https://dontasktoask.com/"
+            )
+            embed = info(content, interaction.guild.me, "")
+            await interaction.response.send_message(embed=embed)
+            message = await interaction.original_response()
+            await RemovableMessage.create_instance(self.bot, message, interaction.user)
+
+        elif value == "markdown":
+            content = (
+                "You can format your code by using markdown like this:\n\n"
+                "\\`\\`\\`python\n"
+                "print('Hello world')\n"
+                "\\`\\`\\`\n\n"
+                "This would give you:\n"
+                "```python\n"
+                "print('Hello world')```\n"
+                "**Video explanation:**\n"
+            )
+            embed = info(
+                content, interaction.guild.me, "",
+                "Note: The character ` is not a quote but a backtick."
+            )
+            embed.set_image(url="https://lairesit.sirv.com/Tortoise/howto.gif")
+            await interaction.response.send_message(embed=embed)
+            message = await interaction.original_response()
+            await RemovableMessage.create_instance(self.bot, message, interaction.user)
+
+        elif value == "run_help":
+            content = (
+                "# How to Run Code using the bot\n\n"
+                "Run code by sending a message that starts with `/run` followed by a fenced code block.\n\n"
+                "**Format:**\n\n"
+                "/run\n\\`\\`\\`<language>\n"
+                "print(1 + 1)\n"
+                "\\`\\`\\`\n\n"
+                "Language support: **python**, **javascript**, **java** (**py**,**js** also works)\n\n"
+                "### Examples\n"
+                "**Python:**\n\n"
+                "/run ```python\n"
+                "print(1 + 1)\n"
+                "```\n"
+                "**JavaScript:**\n\n"
+                "/run ```javascript\n"
+                "console.log(1 + 1)\n"
+                "```\n"
+                "**Java:**\n\n"
+                "/run ```java\n"
+                "public class Main {\n"
+                "    public static void main(String[] args) {\n"
+                "        System.out.println(1 + 1);\n"
+                "    }\n"
+                "}\n"
+                "```\n\n"
+                "**Video Explanation:**\n"
+            )
+            embed = info(
+                content, interaction.guild.me, "",
+                "You can edit your message within 2 minutes to re-run the code automatically."
+            )
+            embed.set_image(url="https://lairesit.sirv.com/Tortoise/howtoruncode.gif")
+            await interaction.response.send_message(embed=embed)
+            message = await interaction.original_response()
+            await RemovableMessage.create_instance(self.bot, message, interaction.user)
+
+        elif value == "zen":
+            zen = """
+                Beautiful is better than ugly.
+                Explicit is better than implicit.
+                Simple is better than complex.
+                Complex is better than complicated.
+                Flat is better than nested.
+                Sparse is better than dense.
+                Readability counts.
+                Special cases aren't special enough to break the rules.
+                Although practicality beats purity.
+                Errors should never pass silently.
+                Unless explicitly silenced.
+                In the face of ambiguity, refuse the temptation to guess.
+                There should be one-- and preferably only one --obvious way to do it.
+                Although that way may not be obvious at first unless you're Dutch.
+                Now is better than never.
+                Although never is often better than *right* now.
+                If the implementation is hard to explain, it's a bad idea.
+                If the implementation is easy to explain, it may be a good idea.
+                Namespaces are one honking great idea -- let's do more of those!
+            """
+            await interaction.response.send_message(
+                embed=info(zen, interaction.guild.me, title="The Zen of Python, by Tim Peters")
+            )
+
+        elif value == "add_to_issues":
+            msg = r"""
+                ░█████╗░██████╗░██████╗░  ████████╗░█████╗░  ██╗░██████╗░██████╗██╗░░░██╗███████╗░██████╗
+                ██╔══██╗██╔══██╗██╔══██╗  ╚══██╔══╝██╔══██╗  ██║██╔════╝██╔════╝██║░░░██║██╔════╝██╔════╝
+                ███████║██║░░██║██║░░██║  ░░░██║░░░██║░░██║  ██║╚█████╗░╚█████╗░██║░░░██║█████╗░░╚█████╗░
+                ██╔══██║██║░░██║██║░░██║  ░░░██║░░░██║░░██║  ██║░╚═══██╗░╚═══██╗██║░░░██║██╔══╝░░░╚═══██╗
+                ██║░░██║██████╔╝██████╔╝  ░░░██║░░░╚█████╔╝  ██║██████╔╝██████╔╝╚██████╔╝███████╗██████╔╝
+                ╚═╝░░╚═╝╚═════╝░╚═════╝░  ░░░╚═╝░░░░╚════╝░  ╚═╝╚═════╝░╚═════╝░░╚═════╝░╚══════╝╚═════╝░            
+                """
+            await interaction.response.send_message(f"```\n{msg}```")
+
+
+class DropdownView(discord.ui.View):
+    def __init__(self, bot, cog_instance):
+        super().__init__(timeout=60)
+        self.add_item(TagDropdown(bot, cog_instance))
+
+
 class Miscellaneous(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -108,118 +238,10 @@ class Miscellaneous(commands.Cog):
 
         return constructed
 
-    @app_commands.command(name="add_to_issues")
-    async def add_to_issues(self, interaction: discord.Interaction):
-        msg = r"""
-            ░█████╗░██████╗░██████╗░  ████████╗░█████╗░  ██╗░██████╗░██████╗██╗░░░██╗███████╗░██████╗
-            ██╔══██╗██╔══██╗██╔══██╗  ╚══██╔══╝██╔══██╗  ██║██╔════╝██╔════╝██║░░░██║██╔════╝██╔════╝
-            ███████║██║░░██║██║░░██║  ░░░██║░░░██║░░██║  ██║╚█████╗░╚█████╗░██║░░░██║█████╗░░╚█████╗░
-            ██╔══██║██║░░██║██║░░██║  ░░░██║░░░██║░░██║  ██║░╚═══██╗░╚═══██╗██║░░░██║██╔══╝░░░╚═══██╗
-            ██║░░██║██████╔╝██████╔╝  ░░░██║░░░╚█████╔╝  ██║██████╔╝██████╔╝╚██████╔╝███████╗██████╔╝
-            ╚═╝░░╚═╝╚═════╝░╚═════╝░  ░░░╚═╝░░░░╚════╝░  ╚═╝╚═════╝░╚═════╝░░╚═════╝░╚══════╝╚═════╝░            
-            """
-        await interaction.response.send_message(f"```\n{msg}```")
-
-    @app_commands.command(name="ask")
-    async def ask(self, interaction: discord.Interaction):
-        content = (
-            "Don't ask to ask, just ask.\n\n"
-            " • You will have much higher chances of getting an answer\n"
-            " • We can skip the whole process of actually getting the question out of you thus you will get "
-            "answer faster\n\n"
-            "For more info visit https://dontasktoask.com/"
-        )
-        embed = info(content, interaction.guild.me, "")
-        await interaction.response.send_message(embed=embed)
-        message = await interaction.original_response()
-        await RemovableMessage.create_instance(self.bot, message, interaction.user)
-
-    @app_commands.command(name="markdown")
-    async def markdown(self, interaction: discord.Interaction):
-        content = (
-            "You can format your code by using markdown like this:\n\n"
-            "\\`\\`\\`python\n"
-            "print('Hello world')\n"
-            "\\`\\`\\`\n\n"
-            "This would give you:\n"
-            "```python\n"
-            "print('Hello world')```\n"
-            "**Video explanation:**\n"
-        )
-        embed = info(
-            content, interaction.guild.me, "",
-            "Note: The character ` is not a quote but a backtick."
-        )
-        embed.set_image(url="https://lairesit.sirv.com/Tortoise/howto.gif")
-        await interaction.response.send_message(embed=embed)
-        message = await interaction.original_response()
-        await RemovableMessage.create_instance(self.bot, message, interaction.user)
-
-    @app_commands.command(name="zen")
-    async def zen(self, interaction: discord.Interaction):
-        zen = """
-            Beautiful is better than ugly.
-            Explicit is better than implicit.
-            Simple is better than complex.
-            Complex is better than complicated.
-            Flat is better than nested.
-            Sparse is better than dense.
-            Readability counts.
-            Special cases aren't special enough to break the rules.
-            Although practicality beats purity.
-            Errors should never pass silently.
-            Unless explicitly silenced.
-            In the face of ambiguity, refuse the temptation to guess.
-            There should be one-- and preferably only one --obvious way to do it.
-            Although that way may not be obvious at first unless you're Dutch.
-            Now is better than never.
-            Although never is often better than *right* now.
-            If the implementation is hard to explain, it's a bad idea.
-            If the implementation is easy to explain, it may be a good idea.
-            Namespaces are one honking great idea -- let's do more of those!
-        """
-        await interaction.response.send_message(
-            embed=info(zen, interaction.guild.me, title="The Zen of Python, by Tim Peters")
-        )
-
-    @app_commands.command(name="run_help", description="Show how to run code with the execution bot")
-    async def run_help(self, interaction: discord.Interaction):
-        content = (
-            "# How to Run Code using the bot\n\n"
-            "Run code by sending a message that starts with `/run` followed by a fenced code block.\n\n"
-            "**Format:**\n\n"
-            "/run\n\\`\\`\\`<language>\n"
-            "print(1 + 1)\n"
-            "\\`\\`\\`\n\n"
-            "Language support: **python**, **javascript**, **java** (**py**,**js** also works)\n\n"
-            "### Examples\n"
-            "**Python:**\n\n"
-            "/run ```python\n"
-            "print(1 + 1)\n"
-            "```\n"
-            "**JavaScript:**\n\n"
-            "/run ```javascript\n"
-            "console.log(1 + 1)\n"
-            "```\n"
-            "**Java:**\n\n"
-            "/run ```java\n"
-            "public class Main {\n"
-            "    public static void main(String[] args) {\n"
-            "        System.out.println(1 + 1);\n"
-            "    }\n"
-            "}\n"
-            "```\n\n"
-            "**Video Explanation:**\n"
-        )
-
-        embed = info(
-            content, interaction.guild.me, "",
-            "You can edit your message within 2 minutes to re-run the code automatically."
-        )
-        embed.set_image(url="https://lairesit.sirv.com/Tortoise/howtoruncode.gif")
-        await interaction.response.send_message(embed=embed)
-        message = await interaction.original_response()
-        await RemovableMessage.create_instance(self.bot, message, interaction.user)
+    @app_commands.command(name="tag", description="Select a community resource tag from the menu")
+    async def tag(self, interaction: discord.Interaction):
+        view = DropdownView(self.bot, self)
+        await interaction.response.send_message("Please select an option below:", view=view, ephemeral=True)
 
 
 async def setup(bot):
