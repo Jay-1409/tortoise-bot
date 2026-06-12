@@ -21,6 +21,7 @@ LANG_ALIASES = {
     "javascript": "javascript",
     "java": "java",
     "cpp": "cpp",
+    "c++": "cpp"
 }
 
 view = discord.ui.View()
