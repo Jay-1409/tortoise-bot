@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.utils.message_handler import ConfirmationMessage
-from bot.utils.checks import check_if_tortoise_staff
+from bot.utils.checks import check_if_tortoise_staff, check_if_tortoise_mod
 from bot.utils.converters import GetFetchUser, DatetimeConverter
 from bot.utils.embed_handler import success, warning, failure, info, infraction_embed, thumbnail, authored
 
@@ -235,7 +235,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command()
     @app_commands.checks.bot_has_permissions(ban_members=True)
-    @app_commands.check(check_if_tortoise_staff)
+    @app_commands.check(check_if_tortoise_mod)
     @app_commands.checks.cooldown(1, 120)
     async def ban(self,
                   interaction: discord.Interaction,
@@ -249,7 +249,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="ban_with_id")
     @app_commands.checks.bot_has_permissions(ban_members=True)
-    @app_commands.check(check_if_tortoise_staff)
+    @app_commands.check(check_if_tortoise_mod)
     @app_commands.checks.cooldown(1, 120)
     @app_commands.describe(user_id="ID of the user to ban")
     async def ban_with_id(
@@ -430,7 +430,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command()
     @app_commands.checks.bot_has_permissions(manage_messages=True)
-    @app_commands.check(check_if_tortoise_staff)
+    @app_commands.check(check_if_tortoise_mod)
     @app_commands.checks.cooldown(3, 60)
     async def clear(self, interaction: discord.Interaction, amount: int, member: discord.Member = None):
         """

@@ -61,7 +61,7 @@ class Bot(commands.Bot):
             "mod_mail": True,
             "bug_report": False,
             "suggestions": False,
-            "staff_application": False,
+            "staff_application": True,
         }
         self.suppressed_deletes = set()
         self._status_cycle = itertools.cycle([
@@ -125,11 +125,19 @@ class Bot(commands.Bot):
             embed = simple_embed(message=f"Build version: [{commit_hash}]({github_repo_link}/commit/{commit_hash})",
                                  title="")
             embed.set_footer(text=commit_message)
-            # await self.sys_log_channel.send(
-            #     embed=embed,
-            # )
+            await self.sys_log_channel.send(
+                embed=embed,
+            )
         except discord.Forbidden:
             pass
+
+    async def log(self, content: str, embed: discord.Embed) -> bool:
+        try:
+            await self.sys_log_channel.send(content=content, embed=embed)
+            return True
+        except (discord.Forbidden, discord.HTTPException):
+            return False
+
 
     @staticmethod
     async def safe_send(

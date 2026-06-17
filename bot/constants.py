@@ -59,7 +59,8 @@ challenges_channel_id = 780841435712716800
 bait_channel_id = 1461666781612740750
 introduction_channel_id = 1487413734056923236
 join_a_team_channel_id = 1489264049983197246
-
+# Ban appeal channel ids
+ban_appeal_channel_id = 1464188530396893336
 # Message id
 teams_dashboard_message_id = 1489264468168016054
 
@@ -74,9 +75,13 @@ challenger_role_id = 781210603997757471
 wizard_role_id = 1472794198053879809
 contributor_role_id = 649630145304461312
 accepting_team_invites_role_id = 1488893079053144184
+jr_moderator_role_id = 1510378507450974351
+
 
 active_role_id = 1482843939978481889
 active_plus_role_id = 1482844032488050921
+chronically_online_role_id = 1511005709653770242
+needs_to_touch_grass_role_id = 1511006001623470120
 boot_role_id = 1472793802740596839
 apprentice_role_id = 1472725760723648522
 fellow_role_id = 1472793939630358731
@@ -130,7 +135,15 @@ promotable_roles = {
     contributor_role_id:  "This role recognizes members who actively contribute to our **GitHub repositories** "
                          "through code, improvements, bug fixes, or other development efforts.\n\n"
                          "Your work helps strengthen our projects and supports the wider **open-source community**.\n\n"
-                         "Thank you for contributing and helping move the project forward!"
+                         "Thank you for contributing and helping move the project forward!",
+    jr_moderator_role_id: "This is a **trial staff role** for members stepping into moderation.\n\n"
+                          "As a **Junior Moderator**, you’ll help keep the server clean, assist members, "
+                          "and get hands-on experience with how moderation works.\n\n"
+                          "This is the **3rd highest role in the staff hierarchy** and lasts for about "
+                          "**1 month**.\n\n"
+                          "Do well during this period, make fair decisions, and help the community "
+                          "and you can be promoted to **Moderator**.\n\n"
+                          "Take initiative, be approachable, and set a good example."
 
 }
 
@@ -147,13 +160,19 @@ progression_roles = {
         "This role represents members who have demonstrated consistent "
         "participation and a willingness to help others in the community.\n\n"
         "Apprentices play an important role in maintaining a welcoming and "
-        "knowledge-sharing environment. Keep up the great work."
+        "knowledge-sharing environment.\n\n### Apprentice Powers\n\n"
+        "You can now nominate other members of the server for **Boot role**.\n"
+        "Use `/nominate` command to nominate a member in the server.\n"
+        "Make sure you nominate only the deserving candidates, so they get the visibility.\n\n"
+        "Keep up the great work!"
     ),
 
     fellow_role_id: (
         "This role is given to members who have earned strong recognition "
         "from the community for their knowledge, contributions, and support "
-        "for others.\n\n"
+        "for others.\n\n### Fellow Powers\n\n"
+        "You can nominate other members of the server for **Apprentice role** or below.\n"
+        "Use `/nominate` command to nominate a member in the server.\n\n"
         "Thank you for setting a positive example. Your presence helps guide "
         "and improve the community."
     )
@@ -167,6 +186,20 @@ automatically_assigned_roles = {
     active_plus_role_id: (
         "Your activity and engagement place you among the server's top contributors.\n"
         "We appreciate the energy you bring to the community\n"
+        "Next milestone: Is there one?"
+    ),
+    chronically_online_role_id: (
+        "Congratulations... I guess? Your message count has breached the event horizon.\n"
+        "You are now officially certified as **Chronically Online**.\n"
+        "Your eyes have adapted to pure dark mode. Blue light filters have no power here.\n\n"
+        "Next milestone: **The Ultimate Threat.**"
+    ),
+    needs_to_touch_grass_role_id: (
+        "🚨 EMERGENCY EVENT DETECTED 🚨\n"
+        "You have unlocked the final hidden evolution: **Needs to Touch Grass**.\n"
+        "The server database is begging you to close Discord. The turtles are worried.\n"
+        "Please step outside, locate a photosynthetic plant organism, and make physical skin contact with it immediately.\n\n"
+        "Next milestone: **Seriously, go outside.**"
     )
 }
 

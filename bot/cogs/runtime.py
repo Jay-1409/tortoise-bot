@@ -21,13 +21,14 @@ LANG_ALIASES = {
     "javascript": "javascript",
     "java": "java",
     "cpp": "cpp",
+    "c++": "cpp"
 }
 
 view = discord.ui.View()
 view.add_item(
     discord.ui.Button(
-        label="Invite to Server",
-        emoji=discord.PartialEmoji(name="plus", id=1481788040232833075),
+        label="Invite Runtime",
+        emoji=discord.PartialEmoji(name="runtime", id=1514142450711527576),
         url="https://discord.com/oauth2/authorize?client_id=780132667265122315",
     )
 )
@@ -42,6 +43,7 @@ class SandboxExec(commands.Cog):
         self.session = aiohttp.ClientSession()
         self.tracked: Dict[int, dict] = {}
         self.runtime_enabled = True
+        self.last_link_time = datetime.now()
 
     def cog_unload(self):
         self.bot.loop.create_task(self.session.close())
@@ -109,6 +111,7 @@ class SandboxExec(commands.Cog):
         exit_code = result.get("code")
         stdout = result.get("output", "") or ""
         stderr = result.get("std_log", "") or ""
+        time_ms = result.get("time_ms", "") or ""
 
         combined = stdout
         if exit_code != 0 and stderr:
@@ -120,7 +123,7 @@ class SandboxExec(commands.Cog):
         if len(combined) > 1900:
             combined = combined[:1900] + "\n... (truncated)"
 
-        return exit_code, combined
+        return exit_code, combined, time_ms
 
     async def _send_result(
         self,
@@ -130,19 +133,30 @@ class SandboxExec(commands.Cog):
         edited: bool = False,
         target_message: discord.Message | None = None,
     ):
-        exit_code, output = self._build_output(result)
+        exit_code, output, time_ms = self._build_output(result)
 
         if result.get("rate_limited") or result.get("maintenance") or result.get("unavailable"):
             embed = failure(result.get("std_log"))
         else:
             embed = code_eval_embed(language, output, edited=edited, exit_code=exit_code, disable_extras=True)
-            embed.set_footer(text=f"Powered by Hermes Engine", icon_url=f"https://lairesit.sirv.com/Tortoise/{language}.png")
+
+            time_text = f"Executed in: {time_ms}ms"
+
+            space_req = max(0, 99 - len(time_text))
+            spacer = "\u0020" * space_req
+
+            embed.set_footer(text=f"{time_text}{spacer}Powered by Hermes Engine", icon_url=f"https://lairesit.sirv.com/Tortoise/{language}.png")
 
         if target_message:
-            await target_message.edit(embed=embed, view=view)
+            await target_message.edit(embed=embed)
             return target_message
         else:
-            return await channel.send(embed=embed, view=view)
+            diff = (datetime.now() - self.last_link_time).total_seconds()
+            link_view = None
+            if diff > 1800:
+                link_view = view
+                self.last_link_time = datetime.now()
+            return await channel.send(embed=embed, view=link_view)
 
 
     @commands.Cog.listener()
@@ -170,7 +184,7 @@ class SandboxExec(commands.Cog):
             try:
                 result = await self._execute(lang, code)
             except Exception:
-                await message.channel.send("Execution request failed.")
+                await message.channel.send(embed=failure("Execution request failed."))
                 return
 
             bot_msg = await self._send_result(message.channel, result, lang)

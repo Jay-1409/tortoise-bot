@@ -701,8 +701,14 @@ class TeamCog(commands.Cog):
 
         try:
             if reason == "removed":
+                remove_embed = info(
+                    f"You have been {reason} from team **{team['name']}**.", self.bot.user, ""
+                )
+                remove_embed.set_footer(
+                    text=f"This may be due your inactivity. You are welcome to reapply"
+                )
                 await member.send(
-                    embed=info(f"You have been {reason} from team **{team['name']}**.", self.bot.user, "")
+                    embed=remove_embed
                 )
         except discord.Forbidden:
             pass
@@ -906,7 +912,11 @@ class TeamCog(commands.Cog):
             await interaction.followup.send(embed=success("Join request rejected"), ephemeral=True)
             if member:
                 try:
-                    await member.send(embed=failure(f"Your request for **{team['name']}** was rejected."))
+                    reject_embed = failure(f"Your request for **{team['name']}** was rejected.\n\n"
+                                           f"-# You are welcome to reapply with different reason.")
+                    await member.send(
+                        embed=reject_embed
+                    )
                 except:
                     pass
                 await self.log_channel.send(

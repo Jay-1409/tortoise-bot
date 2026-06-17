@@ -22,6 +22,7 @@ class JoinManager(commands.Cog):
         self.introduction_channel = None
         self.retention = bot.retention_manager
         self.custom_welcome_content = None
+        self.ban_appeal_channel = None
 
 
     def get_unbanned_embed(self):
@@ -43,6 +44,7 @@ class JoinManager(commands.Cog):
         self.log_channel = self.bot.get_channel(constants.system_log_channel_id)
         self.welcome_role = self.guild.get_role(constants.new_member_role_id)
         self.introduction_channel = self.guild.get_channel(constants.introduction_channel_id)
+        self.ban_appeal_channel = self.ban_appeal_guild.get_channel(constants.ban_appeal_channel_id)
 
         self.bot.loop.create_task(self.tracker.refresh_invite_cache())
         if not self.daily_retention_report.is_running():
@@ -108,6 +110,12 @@ class JoinManager(commands.Cog):
 
             await member.kick(reason="Not banned from Tortoise Programming Community")
             await asyncio.sleep(3)
+        if is_banned:
+            await self.ban_appeal_channel.send(
+                member.mention,
+                delete_after=5,
+            )
+
 
     @staticmethod
     def get_post_intro_message() -> str:
@@ -149,15 +157,25 @@ class JoinManager(commands.Cog):
                     [
                         "👋", "🔥", "👍", "😄", "😸",
                         "🌟", "🫶", "🤝", "👌", "✌️",
-                        "<:upvote:741202481090002994>"
+                        "<:upvote:741202481090002994>",
+                        "<:hi:706045497810485288>",
                     ]
                 )
             )
-            embed = embed_handler.info(
-                self.get_post_intro_message(),
-                self.bot.user,
-                ""
-            )
+            if len(message.clean_content) < 15:
+                embed = embed_handler.info(
+                    f"Your introduction message looks small, No worries! You can still edit it!\n\n"
+                    f"Once you are done, head over to <#{constants.general_channel_id}> and "
+                    f"start chatting with everyone.",
+                    self.bot.user,
+                    ""
+                )
+            else:
+                embed = embed_handler.info(
+                    self.get_post_intro_message(),
+                    self.bot.user,
+                    ""
+                )
             await asyncio.sleep(0.7)
             await message.channel.send(embed=embed, delete_after=30)
 

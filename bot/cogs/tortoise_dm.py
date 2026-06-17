@@ -27,6 +27,135 @@ class UnsupportedFileEncoding(ValueError):
     pass
 
 
+class StaffApplicationModal(discord.ui.Modal, title="Staff Application"):
+    name_input = discord.ui.TextInput(
+        label="Your Name",
+        placeholder="e.g. John Doe",
+        min_length=2, max_length=100,
+        required=True
+    )
+    role_input = discord.ui.TextInput(
+        label="Role Applying For",
+        placeholder="e.g. Moderator, Jr Moderator, Manager",
+        min_length=3, max_length=100,
+        required=True
+    )
+    timezone_input = discord.ui.TextInput(
+        label="Your Timezone",
+        placeholder="e.g. UTC, EST, Asia/Kolkata",
+        min_length=2, max_length=50,
+        required=True
+    )
+    reason_input = discord.ui.Label(
+        text="Tell us about yourself.",
+        description=(
+            "Why are you a good fit, any prior experience?"
+        ),
+        component=discord.ui.TextInput(
+            style=discord.TextStyle.long,
+            min_length=10,
+            max_length=1024,
+            required=True,
+            placeholder="Why should we select you over other candidates?"
+        )
+    )
+
+    def __init__(self, cog: "TortoiseDM"):
+        super().__init__()
+        self.cog = cog
+
+    async def on_submit(self, interaction: discord.Interaction):
+        user = interaction.user
+        await interaction.response.defer(ephemeral=True)
+
+        formatted_submission = (
+            f"**Name:** {self.name_input.value}\n"
+            f"**Role:** {self.role_input.value}\n"
+            f"**Timezone:** {self.timezone_input.value}\n\n"
+            f"**About:**\n{self.reason_input.component.value}\n\n"
+        )
+
+        await self.cog.staff_applications_channel.send(embed=info(
+            f"User {user.mention} submitted staff application:\n\n{formatted_submission}",
+            self.cog.bot.user, "Staff Application", f"ID: {user.id}"
+        ))
+
+        await interaction.followup.send(
+            embed=success("Staff application successfully submitted. Thank you!"),
+            ephemeral=True
+        )
+
+
+class ModMailCloseReasonModal(discord.ui.Modal, title="Close Mod Mail with Response"):
+    response_input = discord.ui.TextInput(
+        label="Reason for closing",
+        style=discord.TextStyle.long,
+        placeholder="Type the response that will be sent to the user's DMs...",
+        min_length=1,
+        max_length=1024,
+        required=True
+    )
+
+    def __init__(self, cog: "TortoiseDM", user_id: int, staff_msg: discord.Message):
+        super().__init__()
+        self.cog = cog
+        self.user_id = user_id
+        self.staff_msg = staff_msg
+
+    async def on_submit(self, interaction: discord.Interaction):
+        mod = interaction.user
+        user_id = self.user_id
+        staff_response = self.response_input.value
+
+        if user_id not in self.cog.pending_mod_mails:
+            await interaction.response.send_message("This mod mail is no longer pending.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        user = self.cog.bot.get_user(user_id)
+
+        if user:
+            try:
+                dm_embed = info(
+                    f"Your mod mail thread has been marked as completed by staff.\n\n"
+                    f"**Staff Response:**\n{staff_response}\n\n"
+                    f"-# If you are not satisfied with the response, Please initiate a new mod mail.\n",
+                    self.cog.bot.user,
+                    "Mod Mail Closed"
+                )
+                dm_embed.set_footer(text="Tortoise Programming Community")
+                await user.send(embed=dm_embed)
+            except discord.HTTPException:
+                pass
+
+        from bot.utils.message_logger import MessageLogger
+        from io import StringIO
+
+        log = MessageLogger(mod.id, user_id)
+        log.add_embed(
+            info(f"Mod Mail closed via dynamic staff action.\n"
+                 f"Staff Response: {staff_response}", mod, "Direct Closure"))
+
+        logs = await self.cog.mod_mail_report_channel.send(
+            file=discord.File(StringIO(str(log)), filename=f"closed_with_response_{user_id}.txt")
+        )
+
+        self.cog.pending_mod_mails.remove(user_id)
+        if user_id in self.cog.modmail_messages:
+            del self.cog.modmail_messages[user_id]
+
+        self.clear_items()
+
+        await self.cog.update_staff_embed_from_message(
+            self.staff_msg,
+            description=f"{logs.jump_url}",
+            footer_append=f"☑️ Accepted by {mod}\n\n🔒 Resolved with response.",
+            color=discord.Color.dark_grey(),
+        )
+
+        await interaction.followup.send(embed=success("Closed and response sent successfully."), ephemeral=True)
+
 class ModMailReasonModal(discord.ui.Modal, title="Contact Staff (Mod Mail)"):
     reason = discord.ui.Label(
         text="Reason for contacting staff",
@@ -156,6 +285,14 @@ class DMInitButton(discord.ui.Button):
                 await interaction.message.edit(view=view)
             return
 
+        if self.label == "Staff Application":
+            await interaction.response.send_modal(StaffApplicationModal(cog))
+            if interaction.message:
+                view = self.view
+                view.clear_items()
+                await interaction.message.edit(view=view)
+            return
+
         if interaction.message:
             view = self.view
             view.clear_items()
@@ -177,7 +314,11 @@ class ModMailAcceptView(discord.ui.View):
         mod = interaction.user
         user_id = self.user_id
 
-        if not any(role in mod.roles for role in (self.cog.admin_role, self.cog.moderator_role)):
+        if not any(role in mod.roles for role in (
+                self.cog.admin_role,
+                self.cog.moderator_role,
+                self.cog.jr_moderator_role
+        )):
             await interaction.response.send_message("No permission.", ephemeral=True)
             return
 
@@ -347,6 +488,25 @@ class ModMailAcceptView(discord.ui.View):
                     except discord.HTTPException:
                         pass
 
+    @discord.ui.button(label="Resolve with Reason", style=discord.ButtonStyle.blurple, custom_id="close_modmail_reason_btn")
+    async def close_with_reason(self, interaction: discord.Interaction, button: discord.ui.Button):
+        mod = interaction.user
+        user_id = self.user_id
+
+        if not any(role in mod.roles for role in (
+                self.cog.admin_role,
+                self.cog.moderator_role,
+                self.cog.jr_moderator_role
+        )):
+            await interaction.response.send_message("No permission.", ephemeral=True)
+            return
+
+        if user_id not in self.cog.pending_mod_mails:
+            await interaction.response.send_message("This mod mail request is no longer pending.", ephemeral=True)
+            return
+
+        await interaction.response.send_modal(ModMailCloseReasonModal(self.cog, user_id, interaction.message))
+
 
 class TortoiseDM(commands.Cog):
     mod_mail_group = app_commands.Group(name="mod_mail", description="Manage your mod mail ping schedule")
@@ -357,6 +517,7 @@ class TortoiseDM(commands.Cog):
         self._ban_appeal_guild = None
         self._admin_role = None
         self._moderator_role = None
+        self._jr_moderator_role = None
         self._mod_mail_ping_role = None
         self.cool_down = CoolDown(seconds=120)
         self.bot.loop.create_task(self.cool_down.start())
@@ -450,6 +611,12 @@ class TortoiseDM(commands.Cog):
         return self._moderator_role
 
     @property
+    def jr_moderator_role(self):
+        if self._jr_moderator_role is None:
+            self._jr_moderator_role = self.tortoise_guild.get_role(constants.jr_moderator_role_id)
+        return self._jr_moderator_role
+
+    @property
     def mod_mail_ping_role(self):
         if self._mod_mail_ping_role is None:
             self._mod_mail_ping_role = self.tortoise_guild.get_role(constants.mod_mail_ping_role_id)
@@ -516,7 +683,7 @@ class TortoiseDM(commands.Cog):
         destination_id = self.active_mod_mails.get(user.id)
         if destination_id is None:
             # If it's None there is no user with that ID that has opened mod mail request.
-            # However we can still have the mod/admin that could be attending mod mail
+            # However, we can still have the mod/admin that could be attending mod mail
             destination_id = self._get_dict_key_by_value(user.id)
 
             if destination_id is None:
@@ -688,31 +855,7 @@ class TortoiseDM(commands.Cog):
         self.active_event_submissions.remove(user.id)
 
     async def create_staff_application(self, user: discord.User):
-        submission_format = ("```ex\n"
-                             "Name: Your name.\n"
-                             "Role: The role you are apply for.\n"
-                             "Timezone: Your timezone. \n"
-                             "About:  Tell us a bit about yourself.\n"
-                             "Reason:  Why are you a good fit for this role??```\n"
-                             "**Other details (Optional)** \n"
-                             " - How long are you active on discord per day.\n"
-                             " - When did you join discord. \n"
-                             " - Any previous experience.")
-
-        user_reply = await self._get_user_reply(
-            self.active_staff_applications,
-            user, "Staff Application",
-            submission_format
-        )
-        if user_reply is None:
-            return
-
-        await self.staff_applications_channel.send(embed=info(
-            f"User {user.mention} submitted staff application: \n"
-            f"{user_reply}", self.bot.user, "Staff Application", f"ID: {user.id}")
-        )
-        await user.send(embed=success("Staff application successfully submitted."))
-        self.active_staff_applications.remove(user.id)
+        pass
 
     async def create_bug_report(self, user: discord.User):
         user_reply = await self._get_user_reply(self.active_bug_reports, user, "Bug Report")

@@ -6,7 +6,7 @@ from discord import app_commands
 
 from bot import constants
 from bot.utils.embed_handler import info, success, failure
-from bot.utils.checks import check_if_tortoise_staff
+from bot.utils.checks import check_if_tortoise_mod
 
 
 class RoleProgression(commands.Cog):
@@ -24,11 +24,13 @@ class RoleProgression(commands.Cog):
         self.flush_cache.start()
         self.active_role_check.start()
         self.active_plus_role_check.start()
+        self.other_progression_role_check.start()
 
     def cog_unload(self):
         self.flush_cache.cancel()
         self.active_role_check.cancel()
         self.active_plus_role_check.cancel()
+        self.other_progression_role_check.cancel()
 
 
     def role(self, role_id):
@@ -82,6 +84,14 @@ class RoleProgression(commands.Cog):
     def active_plus_role(self):
         return self.role(constants.active_plus_role_id)
 
+    @property
+    def chronically_online_role(self):
+        return self.role(constants.chronically_online_role_id)
+
+    @property
+    def needs_to_touch_grass_role(self):
+        return self.role(constants.needs_to_touch_grass_role_id)
+
 
     @tasks.loop(minutes=5)
     async def flush_cache(self):
@@ -113,7 +123,7 @@ class RoleProgression(commands.Cog):
             if member and self.active_role not in member.roles:
                 await member.add_roles(self.active_role)
                 await asyncio.sleep(0.5)
-                await self.db.mark_active(self.guild.id, user_id)
+                await self.db.set_field_value(self.guild.id, user_id, "active", True)
 
                 try:
                     await member.send(
@@ -145,12 +155,11 @@ class RoleProgression(commands.Cog):
                 await member.add_roles(self.active_plus_role)
                 await asyncio.sleep(0.5)
 
-                # Remove previous role
                 if self.active_role in member.roles:
                     await member.remove_roles(self.active_role)
                     await asyncio.sleep(0.5)
 
-                await self.db.mark_active_plus(self.guild.id, user_id)
+                await self.db.set_field_value(self.guild.id, user_id, "active_plus", True)
 
                 try:
                     await member.send(
@@ -166,6 +175,45 @@ class RoleProgression(commands.Cog):
 
                 await self.log_channel.send(
                     embed=info(f"{member.mention} reached **Active+** milestone.", self.bot.user, "")
+                )
+
+    @tasks.loop(hours=24)
+    async def other_progression_role_check(self):
+
+        if not self.guild:
+            return
+
+        for user_id in await self.db.get_chronically_online_users(self.guild.id):
+
+            member = self.guild.get_member(user_id)
+
+            if member and self.chronically_online_role not in member.roles:
+                await member.add_roles(self.chronically_online_role)
+                await asyncio.sleep(0.5)
+
+                if self.active_plus_role in member.roles:
+                    await member.remove_roles(self.active_plus_role)
+                    await asyncio.sleep(0.5)
+
+                await self.db.set_field_value(self.guild.id, user_id, "chronically_online", True)
+
+                try:
+                    await member.send(
+                        embed=info(
+                            "You have earned the **Chronically Online** badge.\n" + constants.automatically_assigned_roles[
+                                self.chronically_online_role.id],
+                            self.bot.user,
+                            "Well Done 🌟",
+                            "This badge is issued only to the chronically online folks!")
+                    )
+                except discord.Forbidden:
+                    pass
+
+                await self.log_channel.send(
+                    embed=info(
+                        f"{member.mention} reached **Chronically Online+** milestone.",
+                        self.bot.user, ""
+                    )
                 )
 
     @active_role_check.before_loop
@@ -285,7 +333,7 @@ class RoleProgression(commands.Cog):
 
     @app_commands.command()
     @app_commands.checks.bot_has_permissions(manage_roles=True)
-    @app_commands.check(check_if_tortoise_staff)
+    @app_commands.check(check_if_tortoise_mod)
     async def promote(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role):
         """Promote member to role."""
         if role.id not in constants.promotable_roles:
