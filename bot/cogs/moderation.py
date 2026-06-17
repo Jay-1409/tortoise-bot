@@ -32,9 +32,10 @@ class DMModal(discord.ui.Modal, title="Send DM to Role"):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
         if isinstance(self.messageable, discord.Member):
+            description = "# 📨 You have received a message\n\n" + self.message.value
             embed = discord.Embed(
-                title=f"📨 You have received a message",
-                description=self.message.value,
+                title="",
+                description=description,
                 color=self.messageable.color
             )
             if interaction.guild.icon:
