@@ -143,7 +143,8 @@ class SpamFilter(commands.Cog):
             title="Suspected Spam Flagged",
             channel=message.channel.mention,
             content=(
-                f"**Spam Probability:** `{probability * 100:.2f}%` (Threshold: `{self.confidence_threshold * 100:.0f}%`)\n"
+                f"**Spam Probability:** `{probability * 100:.2f}%` "
+                f"(Threshold: `{self.confidence_threshold * 100:.0f}%`)\n"
                 f"**Message Content:**\n{truncated_content}\n\n"
                 f"**Jump URL:** [Click here to view message]({message.jump_url})"
             ),

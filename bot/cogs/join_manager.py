@@ -162,11 +162,20 @@ class JoinManager(commands.Cog):
                     ]
                 )
             )
-            embed = embed_handler.info(
-                self.get_post_intro_message(),
-                self.bot.user,
-                ""
-            )
+            if len(message.clean_content) < 15:
+                embed = embed_handler.info(
+                    f"Your introduction message looks small, No worries! You can still edit it!\n\n"
+                    f"Once you are done, head over to <#{constants.general_channel_id}> and "
+                    f"start chatting with everyone.",
+                    self.bot.user,
+                    ""
+                )
+            else:
+                embed = embed_handler.info(
+                    self.get_post_intro_message(),
+                    self.bot.user,
+                    ""
+                )
             await asyncio.sleep(0.7)
             await message.channel.send(embed=embed, delete_after=30)
 
