@@ -16,9 +16,9 @@ from bot.utils.embed_handler import success, warning, failure, info, infraction_
 logger = logging.getLogger(__name__)
 
 class DMModal(discord.ui.Modal, title="Send DM to Role"):
-    def __init__(self, role: discord.Role, interaction: discord.Interaction):
+    def __init__(self, messageable: Union[discord.Role, discord.Member], interaction: discord.Interaction):
         super().__init__()
-        self.role = role
+        self.messageable = messageable
         self.interaction = interaction
 
     message = discord.ui.TextInput(
@@ -31,16 +31,36 @@ class DMModal(discord.ui.Modal, title="Send DM to Role"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        members = (m for m in self.role.members if not m.bot)
-        failed_logs = []
-        failed_mentions = []
-        count = 0
-
-        for member in members:
+        if isinstance(self.messageable, discord.Member):
             embed = discord.Embed(
-                title=f"Message for {self.role.name}",
+                title=f"📨 You have received a message",
                 description=self.message.value,
-                color=self.role.color
+                color=self.messageable.color
+            )
+            if interaction.guild.icon:
+                embed.set_footer(
+                    text=interaction.guild.name,
+                    icon_url=interaction.guild.icon.url
+                )
+
+            try:
+                await self.messageable.send(embed=embed)
+                await interaction.followup.send(
+                    embed=success(f"Successfully notified user.")
+                )
+            except Exception:
+                await interaction.followup.send(
+                    embed=success(f"Failed to notify user. DMs closed.")
+                )
+        else:
+            members = (m for m in self.messageable.members if not m.bot)
+            failed_logs = []
+            failed_mentions = []
+            count = 0
+            embed = discord.Embed(
+                title=f"Message for {self.messageable.name}",
+                description=self.message.value,
+                color=self.messageable.color
             )
 
             if interaction.guild.icon:
@@ -48,32 +68,32 @@ class DMModal(discord.ui.Modal, title="Send DM to Role"):
                     name=interaction.guild.name,
                     icon_url=interaction.guild.icon.url
                 )
-
-            try:
-                await member.send(embed=embed)
-                count += 1
-            except discord.HTTPException:
-                failed_mentions.append(member.mention)
-                failed_logs.append(str(member))
-
-        await interaction.followup.send(
-            embed=success(f"Successfully notified {count} users.")
-        )
-
-        if failed_mentions:
-            failed_str = "\n".join(failed_mentions)
-
-            if len(failed_str) > 4000:
-                failed_str = failed_str[:4000] + "..."
-
-            fail_embed = warning("Failed to notify users:\n\n" + failed_str)
+            for member in members:
+                try:
+                    await member.send(embed=embed)
+                    count += 1
+                except discord.HTTPException:
+                    failed_mentions.append(member.mention)
+                    failed_logs.append(str(member))
 
             await interaction.followup.send(
-                embed=fail_embed,
-                ephemeral=False
+                embed=success(f"Successfully notified {count} users.")
             )
 
-            logger.info(f"Failed to DM: {failed_logs}")
+            if failed_mentions:
+                failed_str = "\n".join(failed_mentions)
+
+                if len(failed_str) > 4000:
+                    failed_str = failed_str[:4000] + "..."
+
+                fail_embed = warning("Failed to notify users:\n\n" + failed_str)
+
+                await interaction.followup.send(
+                    embed=fail_embed,
+                    ephemeral=False
+                )
+
+                logger.info(f"Failed to DM: {failed_logs}")
 
 
 
@@ -517,6 +537,13 @@ class Moderation(commands.Cog):
     async def dm_members(self, interaction: discord.Interaction, role: discord.Role):
         """Opens a modal to DM all members of a role"""
         await interaction.response.send_modal(DMModal(role, interaction))
+
+    @app_commands.command(name="dm_member")
+    @app_commands.checks.cooldown(1, 900)
+    @app_commands.checks.has_permissions(administrator=True)
+    async def dm_member(self, interaction: discord.Interaction, member: discord.Member):
+        """Opens a modal to DM a member"""
+        await interaction.response.send_modal(DMModal(member, interaction))
 
 
     @app_commands.command(name="send")
