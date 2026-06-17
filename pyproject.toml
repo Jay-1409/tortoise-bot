@@ -23,7 +23,7 @@ lxml = "*"
 asyncpraw = "*"
 discord-py = {extras = ["voice"], version = "^2.0"}
 asyncpg = "^0.31.0"
-torch = "^2.12.0"
+numpy = "^2.4.6"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "*"
@@ -31,3 +31,9 @@ pre-commit = "*"
 
 [tool.poetry.scripts]
 start = "bot.__main__:main"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://pytorch.org"
+priority = "explicit"
+
