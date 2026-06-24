@@ -132,7 +132,7 @@ class Bot(commands.Bot):
         except discord.Forbidden:
             pass
 
-    async def log(self, content: str, embed: discord.Embed) -> bool:
+    async def log(self, content: str = None, embed: discord.Embed = None) -> bool:
         try:
             await self.sys_log_channel.send(content=content, embed=embed)
             return True
