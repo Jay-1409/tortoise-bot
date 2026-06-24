@@ -85,6 +85,7 @@ needs_to_touch_grass_role_id = 1511006001623470120
 boot_role_id = 1472793802740596839
 apprentice_role_id = 1472725760723648522
 fellow_role_id = 1472793939630358731
+elite_role_id = 1515787455184240722
 
 mod_mail_ping_role_id = 1493890424518086807
 bot_trap_role_id = 1505158956811685908
@@ -143,7 +144,11 @@ promotable_roles = {
                           "**1 month**.\n\n"
                           "Do well during this period, make fair decisions, and help the community "
                           "and you can be promoted to **Moderator**.\n\n"
-                          "Take initiative, be approachable, and set a good example."
+                          "Take initiative, be approachable, and set a good example.",
+    elite_role_id:        "This role is given to appreciate and honor the **most experienced person on this server**.\n\n"
+                          "This is now the **highest non-staff role** and stands as a testament to your exceptional "
+                          "real-world expertise, seasoned perspective, and industry background.\n\n"
+                          "We are incredibly grateful to have you in our community."
 
 }
 

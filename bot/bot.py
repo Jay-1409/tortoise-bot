@@ -38,7 +38,8 @@ class Bot(commands.Bot):
         "reddit",
         "tortoise_api",
         "utility",
-        "health"
+        "health",
+        "spam_filter"
     )
     build_version = "mystery-build"
     advanced_protection: bool = True
