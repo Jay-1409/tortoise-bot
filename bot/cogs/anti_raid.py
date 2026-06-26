@@ -17,7 +17,7 @@ appeal_view = discord.ui.View()
 appeal_view.add_item(
     discord.ui.Button(
         label="Appeal Ban",
-        emoji=discord.PartialEmoji(name="appeal", id=1520005779636092999),
+        emoji=discord.PartialEmoji(name="appeal", id=1520010775845142548),
         url=appeal_server_link,
     )
 )
