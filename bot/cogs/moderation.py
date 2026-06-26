@@ -15,6 +15,16 @@ from bot.utils.embed_handler import success, warning, failure, info, infraction_
 
 logger = logging.getLogger(__name__)
 
+
+appeal_view = discord.ui.View()
+appeal_view.add_item(
+    discord.ui.Button(
+        label="Appeal Ban",
+        emoji=discord.PartialEmoji(name="appeal", id=1520005779636092999),
+        url=constants.appeal_server_link,
+    )
+)
+
 class DMModal(discord.ui.Modal, title="Send DM to Role"):
     def __init__(self, messageable: Union[discord.Role, discord.Member], interaction: discord.Interaction):
         super().__init__()
@@ -140,8 +150,16 @@ class Moderation(commands.Cog):
         await interaction.response.defer()
 
         try:
+            view = discord.ui.View()
+            view.add_item(
+                discord.ui.Button(
+                    label="Appeal Kick",
+                    emoji=discord.PartialEmoji(name="appeal", id=1520005779636092999),
+                    url=constants.appeal_server_link,
+                )
+            )
             dm_embed = infraction_embed(interaction, member, constants.Infraction.kick, reason, True, False)
-            await member.send(embed=dm_embed)
+            await member.send(embed=dm_embed, view=view)
         except discord.Forbidden:
             pass
 
@@ -330,7 +348,7 @@ class Moderation(commands.Cog):
         if send_dm:
             embed = infraction_embed(interaction, user, constants.Infraction.ban, reason, True, permanent)
             try:
-                await user.send(embed=embed)
+                await user.send(embed=embed, view=appeal_view if not permanent else None)
             except discord.Forbidden:
                 pass
             except discord.HTTPException:

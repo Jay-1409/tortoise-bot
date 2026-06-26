@@ -231,10 +231,6 @@ def infraction_embed(
     else:
         embed.add_field(name="**Duration**", value="Temporary", inline=False)
         if is_dm:
-            embed.add_field(name="Appeal Server",
-                               value=f"[Click Here to Join]({constants.appeal_server_link})",
-                               inline=False
-                               )
             embed.set_footer(text="If you think this happened by a mistake join our Appeal Server.")
 
     if not is_dm:

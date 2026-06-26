@@ -12,13 +12,22 @@ from discord import Member, Message, app_commands, Guild
 from bot import constants
 from bot.utils.embed_handler import info, moderation_log_embed, warning, success, infraction_embed
 from bot.utils.message_handler import RemovableMessage
-from bot.constants import allowed_file_extensions, online_viewer_url
+from bot.constants import allowed_file_extensions, online_viewer_url, appeal_server_link
 from bot.utils.checks import tortoise_bot_developer_only
 from bot.utils.misc import get_user_avatar
 from bot.utils.custom_types import FakeInteraction
 
 logger = logging.getLogger(__name__)
 
+
+appeal_view = discord.ui.View()
+appeal_view.add_item(
+    discord.ui.Button(
+        label="Appeal Ban",
+        emoji=discord.PartialEmoji(name="appeal", id=1520005779636092999),
+        url=appeal_server_link,
+    )
+)
 
 class PDFViewerButtonView(discord.ui.View):
 
@@ -330,7 +339,7 @@ class Security(commands.Cog):
         embed.set_footer(text="⚠️ This was an automated action. If you'd like to appeal, join the appeal server.")
 
         try:
-            await member.send(embed=embed)
+            await member.send(embed=embed, view=appeal_view)
         except discord.Forbidden:
             pass
 
