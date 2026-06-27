@@ -92,6 +92,10 @@ class RoleProgression(commands.Cog):
     def needs_to_touch_grass_role(self):
         return self.role(constants.needs_to_touch_grass_role_id)
 
+    @property
+    def activity_role_ids(self):
+        return constants.automatically_assigned_roles.keys()
+
 
     @tasks.loop(minutes=5)
     async def flush_cache(self):
@@ -421,10 +425,10 @@ class RoleProgression(commands.Cog):
             )
             return
 
-        if stage == "boot" and self.active_role not in member.roles:
+        if stage == "boot" and self.check_for_active_roles(member):
             await interaction.response.send_message(
                 embed=failure(
-                    f"User must have {self.active_role.mention} role before they could be nominated."
+                    f"User must have {self.active_role.mention} role or above before they could be nominated."
                 ),
                 ephemeral=True
             )
@@ -609,6 +613,9 @@ class RoleProgression(commands.Cog):
             ),
             ephemeral=False
         )
+
+    def check_for_active_roles(self, member):
+        return bool(self.activity_role_ids & {role.id for role in member.roles})
 
 
 
