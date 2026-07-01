@@ -28,6 +28,7 @@ numpy = "^2.4.6"
 [tool.poetry.group.dev.dependencies]
 flake8 = "*"
 pre-commit = "*"
+watchfiles = "^1.2.0"
 
 [tool.poetry.scripts]
 start = "bot.__main__:main"

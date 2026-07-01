@@ -37,8 +37,10 @@ suggestions_channel_id = 708734512296624239
 
 # Log Channel IDs
 system_log_channel_id = 1461947577200148605
-deterrence_log_channel_id = system_log_channel_id
-bot_log_channel_id = system_log_channel_id
+deterrence_log_channel_id = 1521908452837036104
+bot_log_channel_id = 1521907692745265343
+message_log_channel_id = 1521908191858917477
+user_log_channel_id = 1521910276272816138
 successful_verifications_channel_id = 581139962611892229
 verification_channel_id = 602156675863937024
 website_log_channel_id = 649868379372388352
