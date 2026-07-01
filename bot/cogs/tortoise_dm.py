@@ -576,12 +576,12 @@ class TortoiseDM(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         # Server Utility Channels
-        self.bug_report_channel = self.bot.get_channel(constants.bug_reports_channel_id)
-        self.user_suggestions_channel = self.bot.get_channel(constants.suggestions_channel_id)
-        self.mod_mail_report_channel = self.bot.get_channel(constants.mod_mail_report_channel_id)
-        self.code_submissions_channel = self.bot.get_channel(constants.code_submissions_channel_id)
         self.staff_channel = self.bot.get_channel(constants.staff_channel_id)
-        self.staff_applications_channel = self.bot.get_channel(constants.system_log_channel_id)
+        self.bug_report_channel = self.bot.get_channel(constants.bot_log_channel_id)
+        self.mod_mail_report_channel = self.bot.get_channel(constants.bot_log_channel_id)
+        self.user_suggestions_channel = self.bot.get_channel(constants.bot_log_channel_id)
+        self.code_submissions_channel = self.bot.get_channel(constants.bot_log_channel_id)
+        self.staff_applications_channel = self.bot.get_channel(constants.bot_log_channel_id)
 
         if not self.duty_automation_loop.is_running():
             self.duty_automation_loop.start()

@@ -4,7 +4,7 @@ from typing import Optional
 import discord
 from discord.ext import commands
 from discord import app_commands
-from bot.constants import system_log_channel_id
+from bot.constants import challenges_channel_id
 from bot.utils.embed_handler import info, warning, success
 from bot.utils.checks import check_if_tortoise_staff
 
@@ -17,7 +17,7 @@ class Leaderboard(commands.Cog):
     @property
     def log_channel(self):
         if self._log_channel is None:
-            self._log_channel = self.bot.get_channel(system_log_channel_id)
+            self._log_channel = self.bot.get_channel(challenges_channel_id)
         return self._log_channel
 
     @staticmethod
