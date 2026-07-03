@@ -427,7 +427,7 @@ class RoleProgression(commands.Cog):
             )
             return
 
-        if stage == "boot" and self.check_for_active_roles(member):
+        if stage == "boot" and not self.check_for_active_roles(member):
             await interaction.response.send_message(
                 embed=failure(
                     f"User must have {self.active_role.mention} role or above before they could be nominated."
