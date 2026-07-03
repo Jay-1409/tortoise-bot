@@ -6,9 +6,9 @@ from typing import Optional, List, Union
 
 import aiohttp
 from dotenv import load_dotenv
-from discord import Member, User, Message
+from discord import Member
 
-from bot.constants import SuggestionStatus, tortoise_guild_id, github_repo_stats_endpoint
+from bot.constants import tortoise_guild_id, github_repo_stats_endpoint
 
 
 load_dotenv()  # TODO why here also? in main too
@@ -115,39 +115,6 @@ class TortoiseAPI(BaseAPIClient):
         }
         super().__init__("https://api.tortoisecommunity.org/private/", headers=auth_header)
 
-    async def get_suggestions_under_review(self) -> List[dict]:
-        # Gets all suggestion that are under-review
-        return await self.get("suggestions/")
-
-    async def get_suggestion_reaction_message_id(self, guild_id) -> int:
-        # Returns the suggestion message id of the suggestion channel
-        server_meta = await self.get_server_meta(guild_id=guild_id)
-        return server_meta.get("suggestion_message_id")
-
-    async def get_suggestion(self, suggestion_id: int) -> dict:
-        # Return format
-        # (message_id, author_id, author_name, default, brief, status, reason, avatar, link, date)
-        return await self.get(f"suggestions/{suggestion_id}/")
-
-    async def post_suggestion(self, author: User, message: Message, suggestion: str):
-        # Creates new suggestion with default under-review status.
-        data = {
-            "message_id": message.id,
-            "author_id": author.id,
-            "author_name": author.display_name,
-            "brief": suggestion,
-            "avatar": str(author.avatar.url),
-            "link": message.jump_url,
-            "date": datetime.now(timezone.utc).isoformat()
-        }
-        await self.post("suggestions/", json=data)
-
-    async def edit_suggestion(self, suggestion_id: int, status: SuggestionStatus, reason: str):
-        data = {"status": status.value, "reason": reason}
-        await self.put(f"suggestions/{suggestion_id}/", json=data)
-
-    async def delete_suggestion(self, suggestion_id: int):
-        await self.delete(f"suggestions/{suggestion_id}/")
 
     async def get_all_rules(self) -> List[dict]:
         # Return is list of dicts in format  ('number', 'name', alias', 'statement'):
@@ -156,14 +123,6 @@ class TortoiseAPI(BaseAPIClient):
     async def get_server_meta(self, guild_id: int = tortoise_guild_id) -> dict:
         # Return ('event_submission', 'mod_mail', 'bug_report', 'suggestions', 'suggestion_message_id', 'bot_status')
         return await self.get(f"server/meta/{guild_id}/")
-
-    async def get_suggestion_message_id(self) -> int:
-        server_meta = await self.get_server_meta()
-        return server_meta["suggestion_message_id"]
-
-    async def edit_suggestion_message_id(self, new_id: int, guild_id: int = tortoise_guild_id) -> None:
-        payload = {"suggestion_message_id": new_id}
-        await self.put(f"server/meta/{guild_id}/", json=payload)
 
     async def get_all_members(self) -> List[dict]:
         # Gets all members with all data except email

@@ -45,7 +45,7 @@ class RoleProgression(commands.Cog):
     @property
     def log_channel(self):
         if self._log_channel is None:
-            self._log_channel = self.bot.get_channel(constants.system_log_channel_id)
+            self._log_channel = self.bot.get_channel(constants.role_progression_log_channel_id)
         return self._log_channel
 
     @property
@@ -215,7 +215,7 @@ class RoleProgression(commands.Cog):
 
                 await self.log_channel.send(
                     embed=info(
-                        f"{member.mention} reached **Chronically Online+** milestone.",
+                        f"{member.mention} reached **Chronically Online** milestone.",
                         self.bot.user, ""
                     )
                 )

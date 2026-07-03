@@ -28,26 +28,21 @@ bot_avatar_url = "https://lairesit.sirv.com/Tortoise/tortoise.png"
 # Channel IDs
 welcome_channel_id = 738731842538176522
 announcements_channel_id = 578197131526144024
-react_for_roles_channel_id = 603651772950773761
-
-mod_mail_report_channel_id = 1461947577200148605
-bug_reports_channel_id = 693790120712601610
-code_submissions_channel_id = 610079185569841153
-suggestions_channel_id = 708734512296624239
 
 # Log Channel IDs
-system_log_channel_id = 1461947577200148605
 deterrence_log_channel_id = 1521908452837036104
 bot_log_channel_id = 1521907692745265343
 message_log_channel_id = 1521908191858917477
 user_log_channel_id = 1521910276272816138
 team_log_channel_id = 1521951592189001768
 challenge_log_channel_id = 1521954677770420245
-successful_verifications_channel_id = 581139962611892229
-verification_channel_id = 602156675863937024
-website_log_channel_id = 649868379372388352
+role_progression_log_channel_id = 1522592723331190965
+
+mod_mail_log_channel_id = 1461947577200148605
+bug_reports_log_channel_id = 693790120712601610
+code_submissions_log_channel_id = 610079185569841153
+
 bot_dev_channel_id = 692851221223964822
-error_log_channel_id = system_log_channel_id
 member_count_channel_id = 723526255495872566
 general_channel_id = 577192344533598472
 staff_channel_id = 580809054067097600
@@ -63,8 +58,10 @@ challenges_channel_id = 780841435712716800
 bait_channel_id = 1461666781612740750
 introduction_channel_id = 1487413734056923236
 join_a_team_channel_id = 1489264049983197246
-# Ban appeal channel ids
+
+# Ban Appeal Channels
 ban_appeal_channel_id = 1464188530396893336
+
 # Message id
 teams_dashboard_message_id = 1489264468168016054
 
@@ -93,19 +90,6 @@ elite_role_id = 1515787455184240722
 
 mod_mail_ping_role_id = 1493890424518086807
 bot_trap_role_id = 1505158956811685908
-
-# Dev constants
-# active_role_id = 1482855148077187102
-# active_plus_role_id = 1482855121649012758
-# boot_role_id = 1482855103567495338
-# apprentice_role_id = 1482855079022428180
-# fellow_role_id = 1482855049729278104
-# moderator_role_id = 1482855467800858704
-# tortoise_guild_id = 1481782281143193703
-# trusted_role_id = 1482855079022428180
-# contributor_role_id = 1482855079022428180
-# wizard_role_id = 1482855079022428180
-
 
 
 # Keys are IDs of reaction emojis
@@ -217,7 +201,6 @@ automatically_assigned_roles = {
 mod_mail_emoji_id = 706195614857297970
 event_emoji_id = 611403448750964746
 bug_emoji_id = 723274927968354364
-suggestions_emoji_id = 613185393776656384
 verified_emoji_id = 610713784268357632
 upvote_emoji_id = 741202481090002994
 hit_emoji_id = 755715814883196958
@@ -318,13 +301,6 @@ class Infraction(Enum):
     kick = Color.gold()
     ban = Color.red()
     timeout = Color.orange()
-
-
-class SuggestionStatus(Enum):
-    under_review = "Under Review"
-    denied = "Denied"
-    approved = "Approved"
-
 
 # These are allowed but will get deleted and bot will upload them to pastebin and provide the link to paste
 # The message will be deletable by the author by reacting to emoji (wrong code, token leak)

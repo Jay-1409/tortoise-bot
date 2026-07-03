@@ -13,7 +13,7 @@ from bot import constants
 from bot.utils.checks import check_if_tortoise_staff
 from bot.utils.cooldown import CoolDown
 from bot.utils.message_logger import MessageLogger
-from bot.utils.embed_handler import authored, failure, success, info, create_suggestion_msg, authored_sm
+from bot.utils.embed_handler import authored, failure, success, info
 
 
 logger = logging.getLogger(__name__)
@@ -529,7 +529,6 @@ class TortoiseDM(commands.Cog):
         self.pending_mod_mails = set()
         self.active_event_submissions = set()
         self.active_bug_reports = set()
-        self.active_suggestions = set()
         self.active_staff_applications = set()
 
         # Keys are custom emoji IDs, sub-dict message is the message appearing in the bot DM,
@@ -557,17 +556,11 @@ class TortoiseDM(commands.Cog):
                 "callable": self.create_bug_report,
                 "check": lambda: self.bot.tortoise_meta_cache["bug_report"]
             },
-            constants.suggestions_emoji_id: {
-                "message": "Make a suggestion",
-                "callable": self.create_suggestion,
-                "check": lambda: self.bot.tortoise_meta_cache["suggestions"]
-            }
         }
 
         # User IDs for which the trigger_typing() is active, so we don't spam the method.
         self._typing_active = set()
         self.bug_report_channel = None
-        self.user_suggestions_channel = None
         self.mod_mail_report_channel = None
         self.code_submissions_channel = None
         self.staff_applications_channel = None
@@ -578,9 +571,8 @@ class TortoiseDM(commands.Cog):
         # Server Utility Channels
         self.staff_channel = self.bot.get_channel(constants.staff_channel_id)
         self.bug_report_channel = self.bot.get_channel(constants.bot_log_channel_id)
-        self.mod_mail_report_channel = self.bot.get_channel(constants.bot_log_channel_id)
-        self.user_suggestions_channel = self.bot.get_channel(constants.bot_log_channel_id)
-        self.code_submissions_channel = self.bot.get_channel(constants.bot_log_channel_id)
+        self.mod_mail_report_channel = self.bot.get_channel(constants.mod_mail_log_channel_id)
+        self.code_submissions_channel = self.bot.get_channel(constants.code_submissions_log_channel_id)
         self.staff_applications_channel = self.bot.get_channel(constants.bot_log_channel_id)
 
         if not self.duty_automation_loop.is_running():
@@ -729,7 +721,6 @@ class TortoiseDM(commands.Cog):
                 self.active_mod_mails.values(),
                 self.active_event_submissions,
                 self.active_bug_reports,
-                self.active_suggestions,
                 self.active_staff_applications,
             )
         )
@@ -865,16 +856,6 @@ class TortoiseDM(commands.Cog):
         await self.bug_report_channel.send(f"User `{user}` ID:{user.id} submitted bug report: {user_reply}")
         await user.send(embed=success("Bug report successfully submitted, thank you."))
         self.active_bug_reports.remove(user.id)
-
-    async def create_suggestion(self, user: discord.User):
-        user_reply = await self._get_user_reply(self.active_suggestions, user, "Suggestion")
-        if user_reply is None:
-            return
-
-        msg = await create_suggestion_msg(self.user_suggestions_channel, user, user_reply)
-        await self.bot.api_client.post_suggestion(user, msg, user_reply)
-        await user.send(embed=success("Suggestion successfully submitted, thank you."))
-        self.active_suggestions.remove(user.id)
 
     async def _get_user_reply(self, container: set, user: discord.User, sub_type: str, sub_format=None) -> Union[str, None]:
         """

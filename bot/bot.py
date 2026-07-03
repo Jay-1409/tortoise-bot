@@ -14,7 +14,7 @@ from discord.abc import Messageable
 from discord.ext import commands, tasks
 
 from bot.api_client import TortoiseAPI
-from bot.constants import error_log_channel_id, bot_log_channel_id, github_repo_link
+from bot.constants import bot_log_channel_id, github_repo_link
 from bot.manager import (
     Database, ProgressionManager, AFKManager, PointsManager, RetentionManager, TeamManager, GiveawayManager, DutyManager
 )
@@ -61,7 +61,6 @@ class Bot(commands.Bot):
             "event_submission": False,
             "mod_mail": True,
             "bug_report": False,
-            "suggestions": False,
             "staff_application": True,
         }
         self.suppressed_deletes = set()
@@ -236,7 +235,7 @@ class Bot(commands.Bot):
         if not self.is_ready() or self.is_closed():
             return
 
-        error_log_channel = self.get_channel(error_log_channel_id)
+        error_log_channel = self.get_channel(bot_log_channel_id)
         split_messages = list(Bot.split_string_into_chunks(message, 1900))
 
         for count, message in enumerate(split_messages):
