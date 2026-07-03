@@ -91,24 +91,6 @@ elite_role_id = 1515787455184240722
 mod_mail_ping_role_id = 1493890424518086807
 bot_trap_role_id = 1505158956811685908
 
-
-# Keys are IDs of reaction emojis
-# Values are role IDs which will get added if that reaction gets added/removed
-self_assignable_roles = {
-    582547250635603988: 589128905290547217,     # Python
-    603276263414562836: 589129320480636986,     # Javascript
-    723277556459241573: 591254311162347561,     # HTML/CSS
-    723274176991068261: 589131126619111424,     # SQL
-    603275563972689942: 589131022520811523,     # C
-    603275529587654665: 589129873809735700,     # C++
-    723280469122089131: 589130125208190991,     # C#
-    723272019126255726: 589129070609039454,     # Java
-    723276957810163731: 589129583375286415,     # R
-    610825682070798359: 610834658267103262,     # events
-    583614910215356416: 603157798225838101,     # announcements
-    782187224195268629: 781210603997757471      # challenges
-}
-
 promotable_roles = {
     wizard_role_id: "You are currently **#1 on the Challenges Leaderboard**, placing you at the top "
                          "of the server's competitive coding ranks.\n\n"
@@ -233,16 +215,14 @@ online = "<:online:753999406562410536>"
 offline = "<:offline:753999424446922782>"
 dnd = "<:dnd:753999445728952503>"
 spotify_emoji = "<:spotify:754238046123196467>"
-tick_yes = "<:tickyes:758291659330420776>"
-tick_no = "<:tickno:753974818549923960>"
 pin_emoji = "<:pinunread:754233175244537976>"
 user_emoji = "<:user:754234411922227250>"
 git_start_emoji = "<:git_star:758616139646763064>"
 git_fork_emoji = "<:git_fork:758616130780004362>"
 git_commit_emoji = "<:git_commit:758616123590574090>"
 git_repo_emoji = "<:repo:758616137977561119>"
-success_emoji = "<:success:781891698590482442>"
-failure_emoji = "<:failure:781891692160090143>"
+success_emoji = "<:success:1522613769094693048>"
+failure_emoji = "<:failure:1522613811033538681>"
 poker_face_emoji = "<:pokerface:689918352512254035>"
 stonks_emoji = "<:stonks:689918347596660824>"
 sadcat_emoji = "<:sadcat:689913330516754584>"
@@ -252,27 +232,6 @@ google_icon = "https://www.freepnglogos.com/uploads/google-logo-png/" \
               "google-logo-png-google-icon-logo-png-transparent-svg-vector-bie-supply-14.png"
 stack_overflow_icon = "https://cdn2.iconfinder.com/data/icons/social-icons-color/512/stackoverflow-512.png"
 
-# Music Options
-# For all options see:
-# https://github.com/ytdl-org/youtube-dl/blob/3e4cedf9e8cd3157df2457df7274d0c842421945/youtube_dl/YoutubeDL.py#L137-L312
-ytdl_format_options = {
-    "format": "bestaudio/best",
-    "outtmpl": "downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
-    "restrictfilenames": True,
-    "noplaylist": True,
-    "nocheckcertificate": True,
-    "ignoreerrors": False,
-    "logtostderr": False,
-    "quiet": True,
-    "no_warnings": True,
-    "default_search": "auto",
-    "source_address": "0.0.0.0"  # ipv6 addresses cause issues sometimes
-}
-
-ffmpeg_options = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn',
-}
 
 # Special
 tortoise_developers = (197918569894379520, 612349409736392928)
@@ -301,38 +260,6 @@ class Infraction(Enum):
     kick = Color.gold()
     ban = Color.red()
     timeout = Color.orange()
-
-# These are allowed but will get deleted and bot will upload them to pastebin and provide the link to paste
-# The message will be deletable by the author by reacting to emoji (wrong code, token leak)
-extension_to_pastebin = (
-    # Markdown/text based
-    "css", "less",
-    "csv",
-    "htm", "html", "xhtml",
-    "ini", "cfg",
-    "json", "json5", "yaml", "toml",
-    "log",
-    "txt", "md", "markdown",
-    "xml",
-    # Programming languages
-    "c", "cpp", "h",
-    "cs",
-    "go",
-    "hs",
-    "java",
-    "js", "ts", "coffee",
-    "kt",
-    "lisp",
-    "lua",
-    "php",
-    "pl",
-    "py", "pyx",
-    "r",
-    "rb",
-    "rs",
-    "swift",
-    "vb",
-)
 
 # These are allowed and will not get auto-deleted by bot nor will they get a paste link.
 allowed_file_extensions = (

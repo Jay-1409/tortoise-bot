@@ -177,7 +177,7 @@ class Moderation(commands.Cog):
         return await interaction.followup.send(embed=success(f"{member.name} successfully kicked."))
 
 
-    # @app_commands.command()
+    # @app_commands.command(enabled=False)
     # @app_commands.checks.bot_has_permissions(administrator=True)
     # @app_commands.checks.has_permissions(administrator=True)
     # @app_commands.checks.cooldown(1, 120)

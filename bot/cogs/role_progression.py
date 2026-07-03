@@ -1,5 +1,7 @@
 import asyncio
 from collections import defaultdict
+from typing import Set
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -93,8 +95,8 @@ class RoleProgression(commands.Cog):
         return self.role(constants.needs_to_touch_grass_role_id)
 
     @property
-    def activity_role_ids(self):
-        return constants.automatically_assigned_roles.keys()
+    def activity_role_ids(self) -> Set[int]:
+        return set(constants.automatically_assigned_roles)
 
 
     @tasks.loop(minutes=5)
