@@ -38,12 +38,11 @@ team_log_channel_id = 1521951592189001768
 challenge_log_channel_id = 1521954677770420245
 role_progression_log_channel_id = 1522592723331190965
 
-mod_mail_log_channel_id = 1461947577200148605
-bug_reports_log_channel_id = 693790120712601610
-code_submissions_log_channel_id = 610079185569841153
+mod_mail_log_channel_id = bot_log_channel_id
+bug_reports_log_channel_id = bot_log_channel_id
+code_submissions_log_channel_id = bot_log_channel_id
 
 bot_dev_channel_id = 692851221223964822
-member_count_channel_id = 723526255495872566
 general_channel_id = 577192344533598472
 staff_channel_id = 580809054067097600
 
