@@ -1,17 +1,17 @@
-import os
 import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
 from datetime import datetime, timedelta
 from typing import Dict
+from decouple import config
 
 from bot.utils.checks import check_if_tortoise_staff
 from bot.utils.embed_handler import code_eval_embed, failure, success
 from bot.constants import tortoise_guild_id
 
-EXECUTE_URL = os.getenv("EXECUTION_API_URL")
-API_TOKEN = os.getenv("EXECUTION_API_KEY")
+EXECUTE_URL = config("EXECUTION_API_URL")
+API_TOKEN = config("EXECUTION_API_KEY")
 
 
 LANG_ALIASES = {

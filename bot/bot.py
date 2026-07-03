@@ -1,7 +1,6 @@
 import itertools
 import asyncio
 import logging
-import os
 import subprocess
 import sys
 import traceback
@@ -12,6 +11,7 @@ import aiohttp.client_exceptions
 import discord
 from discord.abc import Messageable
 from discord.ext import commands, tasks
+from decouple import config
 
 from bot.api_client import TortoiseAPI
 from bot.constants import bot_log_channel_id, github_repo_link
@@ -24,7 +24,7 @@ from bot.utils.error_handler import TortoiseCommandTree
 logger = logging.getLogger(__name__)
 console_logger = logging.getLogger("console")
 
-DB_URL = os.getenv("DATABASE_URL")
+DB_URL = config("DATABASE_URL")
 
 
 class Bot(commands.Bot):
@@ -116,7 +116,7 @@ class Bot(commands.Bot):
                 stderr=subprocess.DEVNULL,
             ).decode().strip()
         except Exception:
-            commit_hash = os.getenv("BOT_BUILD_VERSION", "mystery-build")
+            commit_hash = config("BOT_BUILD_VERSION", "mystery-build")
             commit_message = ""
 
         self.build_version = commit_hash

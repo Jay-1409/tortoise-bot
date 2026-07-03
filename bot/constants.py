@@ -1,6 +1,8 @@
 from aenum import Enum, NoAlias
 
 from discord import Color
+from decouple import config
+
 
 tortoise_guild_id = 577192344529404154
 ban_appeal_server_id = 1464188109364396169
@@ -184,10 +186,6 @@ event_emoji_id = 611403448750964746
 bug_emoji_id = 723274927968354364
 verified_emoji_id = 610713784268357632
 upvote_emoji_id = 741202481090002994
-hit_emoji_id = 755715814883196958
-stay_emoji_id = 755717238732095562
-double_emoji_id = 755715816657518622
-blank_card_emoji = "<:card:755715225642336287>"
 staff_application_emoji_id = 1485325243043283075
 
 # Auto mod rulesets
@@ -384,3 +382,5 @@ Fun fact (optional):
 ```
 """
 
+if config("DEVELOPMENT_MODE", cast=bool, default=False):
+    from dev.constants import * #noqa

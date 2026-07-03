@@ -5,13 +5,11 @@ from datetime import datetime, timezone
 from typing import Optional, List, Union
 
 import aiohttp
-from dotenv import load_dotenv
 from discord import Member
-
+from decouple import config
 from bot.constants import tortoise_guild_id, github_repo_stats_endpoint
 
 
-load_dotenv()  # TODO why here also? in main too
 logger = logging.getLogger(__name__)
 
 
@@ -110,7 +108,7 @@ class GithubAPI(BaseAPIClient):
 class TortoiseAPI(BaseAPIClient):
     def __init__(self):
         auth_header = {
-            "Authorization": f"Token {os.getenv('API_ACCESS_TOKEN')}",
+            "Authorization": f"Token {config('API_ACCESS_TOKEN')}",
             "Content-Type": "application/json"
         }
         super().__init__("https://api.tortoisecommunity.org/private/", headers=auth_header)
@@ -263,7 +261,7 @@ class AdventOfCodeAPI(BaseAPIClient):
         year: int,
         session_cookie: Optional[str] = None,
     ) -> None:
-        session_cookie = session_cookie or os.getenv("AOC_COOKIE")
+        session_cookie = session_cookie or config("AOC_COOKIE")
 
         if not session_cookie:
             raise ValueError(

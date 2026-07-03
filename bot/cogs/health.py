@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import time
 import platform
 from datetime import datetime, timedelta
@@ -8,8 +7,9 @@ from typing import Dict, List
 
 import psutil
 import discord
-from discord.ext import commands
 from aiohttp import web
+from decouple import config
+from discord.ext import commands
 from discord import app_commands
 from bot.constants import rate_limit_minutes
 
@@ -174,7 +174,7 @@ class HealthCheck(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    host = os.getenv("HOST", "0.0.0.0")
-    port = os.getenv("PORT", "8080")
+    host = config("HOST", default="0.0.0.0")
+    port = config("PORT", default="8080")
 
     await bot.add_cog(HealthCheck(bot, host=host, port=port))
