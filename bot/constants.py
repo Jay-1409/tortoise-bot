@@ -28,7 +28,6 @@ online_viewer_url = "https://viewer.tortoisecommunity.org"
 bot_avatar_url = "https://lairesit.sirv.com/Tortoise/tortoise.png"
 
 # Channel IDs
-welcome_channel_id = 738731842538176522
 announcements_channel_id = 578197131526144024
 
 # Log Channel IDs

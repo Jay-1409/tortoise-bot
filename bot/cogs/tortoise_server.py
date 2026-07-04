@@ -57,7 +57,6 @@ class TortoiseServer(commands.Cog):
         dm_msg = (
             "Welcome to Tortoise Community!\n\n"
             f"By joining the server you agree to our [rules]({constants.rules_url}).\n"
-            f"You can read about our server from <#{constants.welcome_channel_id}> and "
             f"We hope you enjoy your stay!"
         )
         await member.send(embed=footer_embed(dm_msg, "Welcome"))
