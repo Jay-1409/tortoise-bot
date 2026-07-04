@@ -152,6 +152,16 @@ class Bot(commands.Bot):
             return False
 
     async def setup_hook(self):
+
+        dev_mode = config("DEVELOPMENT_MODE", cast=bool, default=False)
+
+        if dev_mode and self.user.id == 712323581828136971:
+            console_logger.critical(
+                f"Production instance should not run on development mode."
+            )
+            await self.close()
+            sys.exit("Critical Shutdown: Prohibited bot instance detected in development environment.")
+
         self.api_client: TortoiseAPI = TortoiseAPI()
 
         self.db = Database(DB_URL)
