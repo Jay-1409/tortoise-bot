@@ -158,7 +158,7 @@ class HealthCheck(commands.Cog):
 
         embed.add_field(
             name="Website",
-            value="[tortoise-bot.tortoisecommunity.org](https://tortoise-bot.tortoisecommunity.org)",
+            value="[tortoise-bot.tyxc.org](https://tortoise-bot.tyxc.org)",
             inline=False,
         )
 

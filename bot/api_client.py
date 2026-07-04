@@ -111,7 +111,7 @@ class TortoiseAPI(BaseAPIClient):
             "Authorization": f"Token {config('API_ACCESS_TOKEN')}",
             "Content-Type": "application/json"
         }
-        super().__init__("https://api.tortoisecommunity.org/private/", headers=auth_header)
+        super().__init__("https://api.tyxc.org/private/", headers=auth_header)
 
 
     async def get_all_rules(self) -> List[dict]:
