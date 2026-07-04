@@ -483,9 +483,9 @@ class RetentionManager:
         """, guild_id)
 
         if not row:
-            return 0, 0
+            return 0, 0, 0
 
-        return row["joins"], row["leaves"]
+        return row["joins"], row["leaves"], row["total_messages"]
 
     async def get_yesterday(self, guild_id: int):
         row = await self.db.pool.fetchrow("""
@@ -496,9 +496,9 @@ class RetentionManager:
         """, guild_id)
 
         if not row:
-            return 0, 0
+            return 0, 0, 0
 
-        return row["joins"], row["leaves"]
+        return row["joins"], row["leaves"], row["total_messages"]
 
     async def get_day_before_yesterday(self, guild_id: int):
         row = await self.db.pool.fetchrow("""
@@ -509,9 +509,9 @@ class RetentionManager:
         """, guild_id)
 
         if not row:
-            return 0, 0
+            return 0, 0, 0
 
-        return row["joins"], row["leaves"]
+        return row["joins"], row["leaves"], row["total_messages"]
 
 
 class TeamManager:

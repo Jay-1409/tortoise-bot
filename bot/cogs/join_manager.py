@@ -268,7 +268,7 @@ class JoinManager(commands.Cog):
         if not guild:
             return
 
-        joins, leaves = await self.retention.get_yesterday(guild.id)
+        joins, leaves, _ = await self.retention.get_yesterday(guild.id)
         net_change = joins - leaves
 
         if net_change > 0:
