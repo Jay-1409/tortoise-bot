@@ -113,7 +113,6 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._tortoise_guild = None
-        self._muted_role = None
         self._verified_role = None
         self._deterrence_log_channel = None
 
@@ -122,12 +121,6 @@ class Moderation(commands.Cog):
         if self._tortoise_guild is None:
             self._tortoise_guild = self.bot.get_guild(constants.tortoise_guild_id)
         return self._tortoise_guild
-
-    @property
-    def muted_role(self):
-        if self._muted_role is None:
-            self._muted_role = self.tortoise_guild.get_role(constants.muted_role_id)
-        return self._muted_role
 
     @property
     def verified_role(self):

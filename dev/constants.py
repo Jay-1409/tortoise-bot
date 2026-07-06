@@ -7,10 +7,7 @@ ban_appeal_server_id = 1464188109364396169
 website_url = "https://www.tyxc.org/"
 privacy_url = "https://www.tyxc.org/privacy"
 rules_url = "https://www.tyxc.org/rules"
-verification_url = "https://www.tyxc.org/verification/"
 github_repo_link = "https://github.com/Tortoise-Community/Tortoise-BOT"
-tortoise_paste_service_link = "https://paste.tyxc.org/"
-tortoise_paste_endpoint = "https://paste.tyxc.org/documents/"
 line_img_url = "https://www.animatedimages.org/data/media/562/animated-line-image-0015.gif"
 infraction_img_url = "https://www.animatedimages.org/data/media/562/animated-line-image-0538.gif"
 banner_url = "https://lairesit.sirv.com/Tortoise/banner.jpg"
@@ -58,14 +55,12 @@ introduction_channel_id = 1520372692090359897
 join_a_team_channel_id = 1520372692446871665
 
 # Ban Appeal Channels
-ban_appeal_channel_id = None
+ban_appeal_channel_id = 1464188530396893336
 
 # Message id
-teams_dashboard_message_id = None
+teams_dashboard_message_id = 1523585450311417876
 
 # Roles
-muted_role_id = None
-verified_role_id = None
 trusted_role_id = 1520372691469729955
 moderator_role_id = 1520372691469729959
 admin_role_id = 1520372691486638113
