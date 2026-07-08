@@ -61,7 +61,7 @@ class Bot(commands.Bot):
             "event_submission": False,
             "mod_mail": True,
             "bug_report": False,
-            "staff_application": True,
+            "staff_application": False,
         }
         self.suppressed_deletes = set()
         self._status_cycle = itertools.cycle([
@@ -165,23 +165,25 @@ class Bot(commands.Bot):
         self.api_client: TortoiseAPI = TortoiseAPI()
 
         self.db = Database(DB_URL)
-        await self.db.connect()
 
-        self.progression_manager = ProgressionManager(self.db)
-        self.afk_manager = AFKManager(self.db)
-        self.points_manager = PointsManager(self.db)
-        self.retention_manager = RetentionManager(self.db)
-        self.team_manager = TeamManager(self.db)
-        self.giveaway_manager = GiveawayManager(self.db)
-        self.duty_manager = DutyManager(self.db)
+        if not config("DISABLE_DB", cast=bool, default=False):
+            await self.db.connect()
 
-        await self.progression_manager.setup()
-        await self.afk_manager.setup()
-        await self.points_manager.setup()
-        await self.retention_manager.setup()
-        await self.team_manager.setup()
-        await self.giveaway_manager.setup()
-        await self.duty_manager.setup()
+            self.progression_manager = ProgressionManager(self.db)
+            self.afk_manager = AFKManager(self.db)
+            self.points_manager = PointsManager(self.db)
+            self.retention_manager = RetentionManager(self.db)
+            self.team_manager = TeamManager(self.db)
+            self.giveaway_manager = GiveawayManager(self.db)
+            self.duty_manager = DutyManager(self.db)
+
+            await self.progression_manager.setup()
+            await self.afk_manager.setup()
+            await self.points_manager.setup()
+            await self.retention_manager.setup()
+            await self.team_manager.setup()
+            await self.giveaway_manager.setup()
+            await self.duty_manager.setup()
 
         await self.load_extensions()
         # await self.reload_tortoise_meta_cache()
