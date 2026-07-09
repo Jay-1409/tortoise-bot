@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 console_logger = logging.getLogger("console")
 
 DB_URL = config("DATABASE_URL")
-
+DEVELOPMENT_MODE = config("DEVELOPMENT_MODE", cast=bool, default=False)
 
 class Bot(commands.Bot):
     # If not empty then only these will be loaded. Good for local debugging. If empty all found are loaded.
@@ -153,9 +153,7 @@ class Bot(commands.Bot):
 
     async def setup_hook(self):
 
-        dev_mode = config("DEVELOPMENT_MODE", cast=bool, default=False)
-
-        if dev_mode and self.user.id == 712323581828136971:
+        if DEVELOPMENT_MODE and self.user.id == 712323581828136971:
             console_logger.critical(
                 f"Production instance should not run on development mode."
             )

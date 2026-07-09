@@ -3,7 +3,7 @@ from aenum import Enum, NoAlias
 from discord import Color
 
 tortoise_guild_id = 1520372691448889364
-ban_appeal_server_id = 1464188109364396169
+ban_appeal_server_id = 1520372691448889364
 website_url = "https://www.tyxc.org/"
 privacy_url = "https://www.tyxc.org/privacy"
 rules_url = "https://www.tyxc.org/rules"
@@ -55,7 +55,7 @@ introduction_channel_id = 1520372692090359897
 join_a_team_channel_id = 1520372692446871665
 
 # Ban Appeal Channels
-ban_appeal_channel_id = 1464188530396893336
+ban_appeal_channel_id = 1520372693155971106
 
 # Message id
 teams_dashboard_message_id = 1523585450311417876
@@ -210,8 +210,10 @@ git_start_emoji = "<:git_star:758616139646763064>"
 git_fork_emoji = "<:git_fork:758616130780004362>"
 git_commit_emoji = "<:git_commit:758616123590574090>"
 git_repo_emoji = "<:repo:758616137977561119>"
-success_emoji = "<:success:1522613769094693048>"
-failure_emoji = "<:failure:1522613811033538681>"
+success_emoji = "<:success:1524706961172463646>"
+failure_emoji = "<:failure:1524706674550767706>"
+warning_low_emoji = "<:warninglow:1524706548301959199>"
+warning_high_emoji = "<:warninghigh:1524706535073120297>"
 poker_face_emoji = "<:pokerface:689918352512254035>"
 stonks_emoji = "<:stonks:689918347596660824>"
 sadcat_emoji = "<:sadcat:689913330516754584>"
