@@ -12,6 +12,7 @@ from discord.ext import commands
 
 from bot.constants import (
     challenge_boilerplate_max_bytes,
+    challenge_discussion_channel_id,
     challenge_default_max_tests,
     challenge_default_points,
     challenge_execution_api_default_timeout_ms,
@@ -32,6 +33,7 @@ from bot.constants import (
     challenge_test_reveal_cost,
     challenge_tests_max_bytes,
     challenge_autocomplete_choice_max_length,
+    system_log_channel_id,
 )
 from bot.utils.challenge import (
     ExecutionApiClient,
@@ -258,6 +260,11 @@ async def get_member_debug(interaction: discord.Interaction) -> str:
 class Challenge(commands.Cog):
     """Automated coding challenges powered by Hermes Engine."""
 
+    challenge_group = app_commands.Group(
+        name="challenge",
+        description="Coding challenge commands.",
+    )
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.max_tests = challenge_default_max_tests
@@ -326,7 +333,194 @@ class Challenge(commands.Cog):
             """
         )
 
-    @app_commands.command(name="problem-add", description="Create or update a coding problem.")
+    @staticmethod
+    def build_rules_embed(user: Any):
+        return info(
+            (
+                "Participants who submit a valid working solution will be awarded points "
+                "and featured on the leaderboard.\n\n"
+                "**Guidelines:**\n"
+                "- Start with a brute force approach if needed, then optimize for time and space complexity.\n"
+                "- Do not use AI assistance.\n"
+                f"- Discussions are allowed in <#{challenge_discussion_channel_id}>, but do not share full solutions.\n"
+                "- Any programming language is allowed.\n\n"
+                "**Complexity Target:**\n"
+                "- Aim for O(N) time and O(N) space or the best achievable complexity.\n"
+                f"- All valid submissions receive {challenge_default_points} points.\n\n"
+                "**Submission Rules:**\n"
+                f"- Use `/challenge submit` to submit your solution.\n"
+                f"- Challenge discussion belongs in <#{challenge_discussion_channel_id}>."
+            ),
+            user,
+            "Challenge Guidelines",
+        )
+
+    async def send_points_log(self, embed: discord.Embed):
+        channel = self.bot.get_channel(system_log_channel_id)
+        if channel is None:
+            logger.warning("Points log channel not found: %s", system_log_channel_id)
+            return
+        try:
+            await channel.send(embed=embed)
+        except discord.HTTPException:
+            logger.exception("Failed to send challenge points log")
+
+    @challenge_group.command(name="rules", description="Show challenge guidelines.")
+    async def challenge_rules(self, interaction: discord.Interaction):
+        await interaction.response.send_message(embed=self.build_rules_embed(self.bot.user))
+
+    @challenge_group.command(name="add-points", description="Give points to a user.")
+    @app_commands.describe(
+        member="Member receiving points.",
+        amount="Number of points to add.",
+        reason="Optional reason shown in the log and DM.",
+        silent="Whether to skip DMing the member.",
+    )
+    async def challenge_add_points(
+        self,
+        interaction: discord.Interaction,
+        member: discord.Member,
+        amount: app_commands.Range[int, 1, 10_000],
+        reason: Optional[str] = None,
+        silent: bool = False,
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        if not await check_if_challenge_moderator(interaction):
+            await interaction.followup.send(
+                embed=failure("You need a moderator/admin/staff role or moderation permissions to add points."),
+                ephemeral=True,
+            )
+            return
+
+        new_total = await self.bot.points_manager.add_points(interaction.guild.id, member.id, amount)
+        desc = (
+            f"{member.mention} received **{amount}** points.\n"
+            f"New total: **{new_total}** points."
+        )
+        dm_desc = (
+            f"You were awarded **{amount}** points.\n"
+            f"New total: **{new_total}** points."
+        )
+        if reason:
+            desc += f"\n\n**Reason:** {reason}"
+            dm_desc += f"\n\n**Comment:** {reason}"
+
+        await self.send_points_log(
+            info(desc, self.bot.user, "Points Awarded", f"Given by {interaction.user.display_name}")
+        )
+
+        if not silent:
+            try:
+                await member.send(embed=info(dm_desc, self.bot.user, "Congratulations 🌟"))
+            except discord.Forbidden:
+                pass
+
+        await interaction.followup.send(
+            embed=success(f"{amount} points awarded. New total: {new_total}"),
+            ephemeral=True,
+        )
+
+    @challenge_group.command(name="remove-points", description="Remove points from a user.")
+    @app_commands.describe(
+        member="Member losing points.",
+        amount="Number of points to remove.",
+        silent="Whether to skip DMing the member.",
+    )
+    async def challenge_remove_points(
+        self,
+        interaction: discord.Interaction,
+        member: discord.Member,
+        amount: app_commands.Range[int, 1, 10_000],
+        silent: bool = True,
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        if not await check_if_challenge_moderator(interaction):
+            await interaction.followup.send(
+                embed=failure("You need a moderator/admin/staff role or moderation permissions to remove points."),
+                ephemeral=True,
+            )
+            return
+
+        new_total = await self.bot.points_manager.remove_points(interaction.guild.id, member.id, amount)
+        await self.send_points_log(
+            info(
+                (
+                    f"**{amount}** points removed from {member.mention}\n"
+                    f"New total: **{new_total}** points."
+                ),
+                self.bot.user,
+                "Points Removed",
+                f"Removed by: {interaction.user.display_name}",
+            )
+        )
+
+        if not silent:
+            try:
+                await member.send(
+                    embed=info(
+                        (
+                            f"**{amount}** points removed\n"
+                            f"New total: **{new_total}** points."
+                        ),
+                        self.bot.user,
+                        "Points Removed ;(",
+                    )
+                )
+            except discord.Forbidden:
+                pass
+
+        await interaction.followup.send(
+            embed=success(f"{amount} points removed. New total: {new_total}"),
+            ephemeral=True,
+        )
+
+    @challenge_group.command(name="leaderboard", description="Show the points leaderboard.")
+    async def challenge_leaderboard(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        entries = await self.bot.points_manager.get_leaderboard(
+            interaction.guild.id,
+            min_points=1,
+            limit=10,
+        )
+        if not entries:
+            await interaction.followup.send(embed=warning("No one has any points yet."), ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title=f"🏆 {interaction.guild.name} Leaderboard",
+            color=discord.Color.gold(),
+        )
+        medals = ["🥇", "🥈", "🥉"]
+        for idx, (user_id, points) in enumerate(entries, start=1):
+            member = interaction.guild.get_member(user_id)
+            name = member.mention if member else f"<@{user_id}>"
+            rank = medals[idx - 1] if idx <= 3 else f"#{idx}"
+            embed.add_field(
+                name=f"**{points}** points",
+                value=f"{rank} {name}",
+                inline=False,
+            )
+
+        await interaction.followup.send(embed=embed)
+
+    @challenge_group.command(name="points", description="Check points.")
+    @app_commands.describe(member="Member to check. Defaults to you.")
+    async def challenge_points(
+        self,
+        interaction: discord.Interaction,
+        member: Optional[discord.Member] = None,
+    ):
+        target = member or interaction.user
+        pts = await self.bot.points_manager.get_points(interaction.guild.id, target.id)
+        await interaction.response.send_message(
+            embed=info(f"{target.mention} has **{pts}** points.", self.bot.user, "Points"),
+            ephemeral=True,
+        )
+
+    @challenge_group.command(name="add", description="Create or update a coding problem.")
     @app_commands.describe(
         title="Problem title.",
         statement="Markdown/text file containing the full problem statement.",
@@ -337,7 +531,7 @@ class Challenge(commands.Cog):
         test_inputs="JSON array of private input strings.",
         expected_outputs="JSON array of expected output strings.",
     )
-    async def problem_add(
+    async def challenge_add(
         self,
         interaction: discord.Interaction,
         title: app_commands.Range[str, challenge_problem_title_min_length, challenge_problem_title_max_length],
@@ -408,6 +602,26 @@ class Challenge(commands.Cog):
             ephemeral=True,
         )
 
+    @challenge_group.command(name="remove", description="Deactivate a coding problem.")
+    @app_commands.autocomplete(problem=challenge_problem_autocomplete)
+    @app_commands.describe(problem="Problem title.")
+    async def challenge_remove(self, interaction: discord.Interaction, problem: str):
+        await interaction.response.defer(ephemeral=True)
+
+        if not await check_if_challenge_moderator(interaction):
+            await interaction.followup.send(
+                embed=failure("You need a moderator/admin/staff role or moderation permissions to remove problems."),
+                ephemeral=True,
+            )
+            return
+
+        removed = await self.deactivate_problem(interaction.guild_id, clean_slug(problem))
+        if not removed:
+            await interaction.followup.send(embed=failure("Problem not found."), ephemeral=True)
+            return
+
+        await interaction.followup.send(embed=success(f"Removed problem `{problem}`."), ephemeral=True)
+
     @commands.command(name="sync")
     @commands.guild_only()
     async def sync_prefix(self, ctx: commands.Context):
@@ -427,32 +641,39 @@ class Challenge(commands.Cog):
             mention_author=False,
         )
 
-    @app_commands.command(name="problems", description="List active coding problems.")
-    async def problems(self, interaction: discord.Interaction):
-        rows = await self.list_problems(interaction.guild_id)
-        if not rows:
-            await interaction.response.send_message(embed=warning("No active problems yet."), ephemeral=True)
-            return
-
-        body = "\n".join(
-            f"`{row['slug']}` — **{row['title']}** ({row['points']} pts)"
-            for row in rows
-        )
-        await interaction.response.send_message(embed=info(body, self.bot.user, "Active Problems"), ephemeral=True)
-
-    @app_commands.command(name="problem", description="Download a problem starter file.")
+    @challenge_group.command(name="view", description="List problems or download a selected problem starter.")
     @app_commands.autocomplete(problem=challenge_problem_autocomplete)
     @app_commands.choices(language=LANGUAGE_CHOICES)
     @app_commands.describe(
-        problem="Problem title.",
-        language="Language starter file to download.",
+        problem="Problem title. Leave empty to list active problems.",
+        language="Language starter file to download when viewing one problem.",
     )
-    async def problem(
+    async def challenge_view(
         self,
         interaction: discord.Interaction,
-        problem: str,
-        language: app_commands.Choice[str],
+        problem: Optional[str] = None,
+        language: Optional[app_commands.Choice[str]] = None,
     ):
+        if problem is None:
+            rows = await self.list_problems(interaction.guild_id)
+            if not rows:
+                await interaction.response.send_message(embed=warning("No active problems yet."), ephemeral=True)
+                return
+
+            body = "\n".join(
+                f"`{row['slug']}` — **{row['title']}** ({row['points']} pts)"
+                for row in rows
+            )
+            await interaction.response.send_message(embed=info(body, self.bot.user, "Active Problems"), ephemeral=True)
+            return
+
+        if language is None:
+            await interaction.response.send_message(
+                embed=failure("Please choose a language when viewing a specific problem."),
+                ephemeral=True,
+            )
+            return
+
         selected = await self.get_problem(interaction.guild_id, clean_slug(problem))
         if selected is None:
             await interaction.response.send_message(embed=failure("Problem not found."), ephemeral=True)
@@ -484,52 +705,21 @@ class Challenge(commands.Cog):
         )
         embed.add_field(name="Points", value=str(selected.points), inline=True)
         embed.add_field(name="Language", value=language.name, inline=True)
-        embed.set_footer(text="Download the starter file, implement the requested function, then use /submit.")
+        embed.set_footer(text="Download the starter file, implement the requested function, then use /challenge submit.")
         await interaction.response.send_message(
             embed=embed,
             files=[statement_file, starter_file],
             ephemeral=True,
         )
 
-    @app_commands.command(name="submit", description="Submit a solution for judging.")
-    @app_commands.autocomplete(problem=challenge_problem_autocomplete)
-    @app_commands.choices(language=LANGUAGE_CHOICES)
-    @app_commands.describe(
-        problem="Problem title.",
-        language="Language of your submitted function.",
-        solution="Function implementation source file.",
-    )
-    async def submit(
-        self,
-        interaction: discord.Interaction,
-        problem: str,
-        language: app_commands.Choice[str],
-        solution: discord.Attachment,
-    ):
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            submitted_code = await download_text(solution, max_bytes=challenge_submission_max_bytes)
-        except Exception as exc:
-            await interaction.followup.send(embed=failure(f"Could not read solution file: {exc}"), ephemeral=True)
-            return
-
-        await self.process_submission(
-            interaction=interaction,
-            problem_slug=clean_slug(problem),
-            language_value=language.value,
-            language_name=language.name,
-            submitted_code=submitted_code,
-        )
-
-    @app_commands.command(name="submit-code", description="Submit a solution by pasting code into a popup form.")
+    @challenge_group.command(name="submit", description="Submit a solution by pasting code into a popup form.")
     @app_commands.autocomplete(problem=challenge_problem_autocomplete)
     @app_commands.choices(language=LANGUAGE_CHOICES)
     @app_commands.describe(
         problem="Problem title.",
         language="Language of your submitted function.",
     )
-    async def submit_code(
+    async def challenge_submit(
         self,
         interaction: discord.Interaction,
         problem: str,
@@ -544,13 +734,13 @@ class Challenge(commands.Cog):
             )
         )
 
-    @app_commands.command(
-        name="test-challenge-pipeline",
+    @challenge_group.command(
+        name="test-pipeline",
         description="Run a mod-only smoke test of the challenge submission pipeline.",
     )
     @app_commands.choices(language=PIPELINE_LANGUAGE_CHOICES)
     @app_commands.describe(language="Language to test. Leave blank or choose All languages for full coverage.")
-    async def test_challenge_pipeline(
+    async def challenge_test_pipeline(
         self,
         interaction: discord.Interaction,
         language: Optional[app_commands.Choice[str]] = None,
@@ -633,10 +823,10 @@ class Challenge(commands.Cog):
             ephemeral=True,
         )
 
-    @app_commands.command(name="reveal-tests-cases", description="Reveal hidden test cases for a problem for points.")
+    @challenge_group.command(name="reveal-tests", description="Reveal hidden test cases for a problem for points.")
     @app_commands.autocomplete(problem=challenge_problem_autocomplete)
     @app_commands.describe(problem="Problem title.")
-    async def reveal_tests_cases(self, interaction: discord.Interaction, problem: str):
+    async def challenge_reveal_tests(self, interaction: discord.Interaction, problem: str):
         selected = await self.get_problem(interaction.guild_id, clean_slug(problem))
         if selected is None:
             await interaction.response.send_message(embed=failure("Problem not found."), ephemeral=True)
@@ -895,6 +1085,20 @@ class Challenge(commands.Cog):
             """,
             guild_id,
         )
+
+    async def deactivate_problem(self, guild_id: int, slug: str) -> bool:
+        result = await self.bot.db.pool.execute(
+            """
+            UPDATE challenge_problems
+            SET active = FALSE
+            WHERE guild_id = $1
+              AND slug = $2
+              AND active = TRUE
+            """,
+            guild_id,
+            slug,
+        )
+        return result == "UPDATE 1"
 
     async def record_submission(
         self,
