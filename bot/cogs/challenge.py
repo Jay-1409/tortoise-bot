@@ -224,6 +224,54 @@ class SolutionSubmissionModal(discord.ui.Modal):
         )
 
 
+class RevealTestsConfirmView(discord.ui.View):
+    def __init__(self, *, cog: "Challenge", user_id: int, problem: Problem):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.user_id = user_id
+        self.problem = problem
+        self.confirmation_step = 1
+
+    def disable_all_buttons(self):
+        for item in self.children:
+            item.disabled = True
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.user_id:
+            return True
+
+        await interaction.response.send_message(
+            embed=failure("Only the user who requested the reveal can confirm it."),
+            ephemeral=True,
+        )
+        return False
+
+    @discord.ui.button(label="Reveal test cases", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.confirmation_step == 1:
+            self.confirmation_step = 2
+            button.label = "Yes, reveal and deduct points"
+            button.style = discord.ButtonStyle.danger
+            await interaction.response.edit_message(
+                embed=warning(
+                    "Second confirmation required.\n\n"
+                    "Revealing these hidden test cases costs **50 points** the first time "
+                    "you reveal this problem. Press the red button again to continue."
+                ),
+                view=self,
+            )
+            return
+
+        self.disable_all_buttons()
+        await interaction.response.edit_message(view=self)
+        await self.cog.reveal_tests_for_user(interaction, self.problem)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, _: discord.ui.Button):
+        self.disable_all_buttons()
+        await interaction.response.edit_message(embed=warning("Test case reveal cancelled."), view=self)
+
+
 async def get_member_debug(interaction: discord.Interaction) -> str:
     if interaction.guild is None:
         return "Guild: none"
@@ -270,8 +318,8 @@ class Challenge(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.max_tests = positive_integer_env("MAX_TESTS", 30)
-        self.hermes = HermesClient(
-            base_url=os.getenv("EXECUTION_API_URL", "http://127.0.0.1:8000/execute"),
+        self.hermes = ExecutionApiClient(
+            url=os.getenv("EXECUTION_API_URL", "http://127.0.0.1:8000/execute"),
             api_token=os.getenv("EXECUTION_API_KEY") or None,
             timeout_seconds=positive_integer_env("EXECUTION_API_TIMEOUT_MS", 15000) / 1000,
         )
@@ -550,6 +598,36 @@ class Challenge(commands.Cog):
             )
         )
 
+    @app_commands.command(name="reveal-tests-cases", description="Reveal hidden test cases for a problem for 50 points.")
+    @app_commands.autocomplete(problem=challenge_problem_autocomplete)
+    @app_commands.describe(problem="Problem title.")
+    async def reveal_tests_cases(self, interaction: discord.Interaction, problem: str):
+        selected = await self.get_problem(interaction.guild_id, clean_slug(problem))
+        if selected is None:
+            await interaction.response.send_message(embed=failure("Problem not found."), ephemeral=True)
+            return
+
+        already_revealed = await self.has_revealed_tests(
+            guild_id=interaction.guild_id,
+            slug=selected.slug,
+            user_id=interaction.user.id,
+        )
+        cost_message = (
+            "You have already revealed this problem before, so revealing it again costs **0 points**."
+            if already_revealed
+            else "This will deduct **50 points** from your score."
+        )
+
+        await interaction.response.send_message(
+            embed=warning(
+                f"You are about to reveal all hidden test cases for **{selected.title}**.\n\n"
+                f"{cost_message}\n\n"
+                "This can spoil the challenge. Confirm twice to continue."
+            ),
+            view=RevealTestsConfirmView(cog=self, user_id=interaction.user.id, problem=selected),
+            ephemeral=True,
+        )
+
     async def process_submission(
         self,
         *,
@@ -788,6 +866,86 @@ class Challenge(commands.Cog):
             points,
         )
         return result == "INSERT 0 1"
+
+    async def has_revealed_tests(self, *, guild_id: int, slug: str, user_id: int) -> bool:
+        return bool(
+            await self.bot.db.pool.fetchval(
+                """
+                SELECT 1
+                FROM challenge_submissions
+                WHERE guild_id = $1
+                  AND problem_slug = $2
+                  AND user_id = $3
+                  AND status = 'tests_revealed'
+                """,
+                guild_id,
+                slug,
+                user_id,
+            )
+        )
+
+    async def mark_tests_revealed(self, *, guild_id: int, slug: str, user_id: int) -> bool:
+        if await self.has_revealed_tests(guild_id=guild_id, slug=slug, user_id=user_id):
+            return False
+
+        await self.bot.db.pool.execute(
+            """
+            INSERT INTO challenge_submissions
+                (guild_id, problem_slug, user_id, language, status, passed_tests, total_tests, error_message)
+            VALUES ($1, $2, $3, 'reveal', 'tests_revealed', 0, 0, 'Deducted 50 points for revealing test cases')
+            """,
+            guild_id,
+            slug,
+            user_id,
+        )
+        return True
+
+    async def reveal_tests_for_user(self, interaction: discord.Interaction, problem: Problem):
+        should_deduct = await self.mark_tests_revealed(
+            guild_id=interaction.guild_id,
+            slug=problem.slug,
+            user_id=interaction.user.id,
+        )
+
+        new_total: Optional[int] = None
+        if should_deduct:
+            new_total = await self.bot.points_manager.remove_points(
+                interaction.guild_id,
+                interaction.user.id,
+                50,
+            )
+
+        payload = {
+            "problem": problem.title,
+            "slug": problem.slug,
+            "revealed_by": interaction.user.id,
+            "points_deducted": 50 if should_deduct else 0,
+            "tests": [
+                {
+                    "name": test.name,
+                    "input": test.input,
+                    "expected": test.expected,
+                }
+                for test in problem.tests
+            ],
+        }
+        file = discord.File(
+            io.BytesIO(json.dumps(payload, indent=2).encode("utf-8")),
+            filename=f"{problem.slug}-test-cases.json",
+        )
+
+        if should_deduct:
+            message = (
+                f"Revealed hidden tests for **{problem.title}**. "
+                f"Deducted **50 points**. New total: **{new_total}**."
+            )
+        else:
+            message = (
+                f"Revealed hidden tests for **{problem.title}** again. "
+                "No points were deducted because you already used this reveal."
+            )
+
+        await interaction.followup.send(embed=success(message), file=file, ephemeral=True)
 
 
 async def download_text(attachment: discord.Attachment, *, max_bytes: int) -> str:
