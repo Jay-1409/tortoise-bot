@@ -685,6 +685,7 @@ class Challenge(commands.Cog):
             )
             return
 
+        judge_started_at = time.perf_counter()
         try:
             result = await judge_submission(
                 hermes=self.hermes,
@@ -697,6 +698,7 @@ class Challenge(commands.Cog):
             logger.exception("Judge failed before recording submission")
             await interaction.followup.send(embed=failure(f"Judge unavailable: {exc}"), ephemeral=True)
             return
+        judge_elapsed_ms = round((time.perf_counter() - judge_started_at) * 1000)
 
         if result.diagnostic:
             logger.warning(
@@ -728,6 +730,7 @@ class Challenge(commands.Cog):
             )
             return
 
+        previous_rank = await self.get_points_rank(interaction.guild_id, interaction.user.id)
         newly_solved = await self.award_solve(
             guild_id=interaction.guild_id,
             slug=selected.slug,
@@ -741,6 +744,20 @@ class Challenge(commands.Cog):
                 interaction.user.id,
                 selected.points,
             )
+            current_rank = await self.get_points_rank(interaction.guild_id, interaction.user.id)
+            await self.log_accepted_submission(
+                interaction=interaction,
+                problem=selected,
+                language_name=language_name,
+                passed=result.passed,
+                total=result.total,
+                judge_elapsed_ms=judge_elapsed_ms,
+                points_awarded=selected.points,
+                previous_rank=previous_rank,
+                current_rank=current_rank,
+                total_points=total_points,
+                newly_solved=True,
+            )
             await interaction.followup.send(
                 embed=success(
                     f"Accepted — {result.total}/{result.total} passed. "
@@ -749,6 +766,24 @@ class Challenge(commands.Cog):
                 ephemeral=True,
             )
         else:
+            total_points = await self.bot.points_manager.get_points(
+                interaction.guild_id,
+                interaction.user.id,
+            )
+            current_rank = await self.get_points_rank(interaction.guild_id, interaction.user.id)
+            await self.log_accepted_submission(
+                interaction=interaction,
+                problem=selected,
+                language_name=language_name,
+                passed=result.passed,
+                total=result.total,
+                judge_elapsed_ms=judge_elapsed_ms,
+                points_awarded=0,
+                previous_rank=previous_rank,
+                current_rank=current_rank,
+                total_points=total_points,
+                newly_solved=False,
+            )
             await interaction.followup.send(
                 embed=success(
                     f"Accepted — {result.total}/{result.total} passed. "
@@ -902,6 +937,86 @@ class Challenge(commands.Cog):
             points,
         )
         return result == "INSERT 0 1"
+
+    async def get_points_rank(self, guild_id: int, user_id: int) -> Optional[int]:
+        return await self.bot.db.pool.fetchval(
+            """
+            WITH ranked AS (
+                SELECT
+                    user_id,
+                    RANK() OVER (ORDER BY points DESC) AS rank
+                FROM points
+                WHERE guild_id = $1
+                  AND points > 0
+            )
+            SELECT rank
+            FROM ranked
+            WHERE user_id = $2
+            """,
+            guild_id,
+            user_id,
+        )
+
+    async def log_accepted_submission(
+        self,
+        *,
+        interaction: discord.Interaction,
+        problem: Problem,
+        language_name: str,
+        passed: int,
+        total: int,
+        judge_elapsed_ms: int,
+        points_awarded: int,
+        previous_rank: Optional[int],
+        current_rank: Optional[int],
+        total_points: int,
+        newly_solved: bool,
+    ):
+        guild = interaction.guild
+        if guild is None:
+            return
+
+        channel = discord.utils.get(guild.text_channels, name=challenge_logs_channel_name)
+        if channel is None:
+            channel = guild.get_channel(challenge_logs_channel_id) or self.bot.get_channel(challenge_logs_channel_id)
+        if channel is None:
+            logger.warning("Challenge log channel not found for guild=%s", interaction.guild_id)
+            return
+
+        previous_rank_text = f"#{previous_rank}" if previous_rank is not None else "unranked"
+        current_rank_text = f"#{current_rank}" if current_rank is not None else "unranked"
+        if previous_rank != current_rank:
+            leaderboard_change = f"{previous_rank_text} → {current_rank_text}"
+        else:
+            leaderboard_change = f"unchanged ({current_rank_text})"
+
+        embed = discord.Embed(
+            title="✅ Correct submission",
+            description=(
+                f"{interaction.user.mention} solved **{problem.title}**."
+                if newly_solved
+                else f"{interaction.user.mention} submitted another accepted solution for **{problem.title}**."
+            ),
+            color=discord.Color.green(),
+        )
+        embed.add_field(name="Problem", value=f"{problem.title} (`{problem.slug}`)", inline=False)
+        embed.add_field(name="Language", value=language_name, inline=True)
+        embed.add_field(name="Tests", value=f"{passed}/{total} passed", inline=True)
+        embed.add_field(name="Judge time", value=f"{judge_elapsed_ms} ms", inline=True)
+        embed.add_field(name="Points awarded", value=str(points_awarded), inline=True)
+        embed.add_field(name="Total points", value=str(total_points), inline=True)
+        embed.add_field(name="Leaderboard", value=leaderboard_change, inline=True)
+
+        try:
+            await channel.send(content=interaction.user.mention, embed=embed)
+        except discord.HTTPException:
+            logger.exception(
+                "Failed to send challenge accepted log guild=%s channel=%s user=%s slug=%s",
+                interaction.guild_id,
+                getattr(channel, "id", None),
+                interaction.user.id,
+                problem.slug,
+            )
 
     async def has_revealed_tests(self, *, guild_id: int, slug: str, user_id: int) -> bool:
         return bool(
