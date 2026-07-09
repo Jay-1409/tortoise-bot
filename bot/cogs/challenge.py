@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import base64
-import asyncio
 import io
 import json
 import logging
 import os
 import re
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from typing import Any, Optional
 
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -64,15 +62,15 @@ class JudgeResult:
     diagnostic: Optional[str] = None
 
 
-class HermesClient:
+class ExecutionApiClient:
     def __init__(
         self,
         *,
-        base_url: str,
+        url: str,
         api_token: Optional[str],
         timeout_seconds: float,
     ):
-        self.url = f"{base_url.rstrip('/')}/execute/"
+        self.url = url
         self.api_token = api_token
         self.timeout_seconds = timeout_seconds
 
@@ -80,37 +78,30 @@ class HermesClient:
         if language not in SUPPORTED_LANGUAGES:
             raise ValueError(f"Unsupported language: {language}")
 
-        headers = {"content-type": "application/json"}
+        headers = {}
         if self.api_token:
-            headers["authorization"] = f"Bearer {self.api_token}"
+            headers["Authorization"] = f"Bearer {self.api_token}"
 
-        payload = await asyncio.to_thread(
-            self._execute_sync,
-            headers,
-            {"language": language, "code": code},
-        )
+        timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                self.url,
+                json={"language": language, "code": code},
+                headers=headers,
+            ) as response:
+                if response.status == 403:
+                    body = await response.text()
+                    raise RuntimeError(f"Execution API returned HTTP 403: {body[:200]}")
+                if response.status < 200 or response.status >= 300:
+                    body = await response.text()
+                    raise RuntimeError(f"Execution API returned HTTP {response.status}: {body[:200]}")
+                payload = await response.json()
 
         return ExecutionResult(
             exit_code=int(payload.get("code", payload.get("exit_code", -1))),
             stdout=str(payload.get("output", payload.get("stdout", ""))),
             stderr=str(payload.get("std_log", payload.get("stderr", ""))),
         )
-
-    def _execute_sync(self, headers: dict[str, str], payload: dict[str, str]) -> dict[str, Any]:
-        data = json.dumps(payload).encode("utf-8")
-        request = urllib.request.Request(
-            self.url,
-            data=data,
-            headers=headers,
-            method="POST",
-        )
-
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                body = response.read().decode("utf-8")
-                return json.loads(body)
-        except urllib.error.HTTPError as exc:
-            raise RuntimeError(f"Hermes returned HTTP {exc.code}") from exc
 
 
 async def challenge_problem_autocomplete(
@@ -230,7 +221,7 @@ class Challenge(commands.Cog):
         self.bot = bot
         self.max_tests = positive_integer_env("MAX_TESTS", 30)
         self.hermes = HermesClient(
-            base_url=os.getenv("EXECUTION_API_URL", "http://127.0.0.1:8000"),
+            base_url=os.getenv("EXECUTION_API_URL", "http://127.0.0.1:8000/execute"),
             api_token=os.getenv("EXECUTION_API_KEY") or None,
             timeout_seconds=positive_integer_env("EXECUTION_API_TIMEOUT_MS", 15000) / 1000,
         )
@@ -794,7 +785,7 @@ def build_executable(language: str, solution: str, test_input: str) -> str:
 
 async def judge_submission(
     *,
-    hermes: HermesClient,
+    hermes: ExecutionApiClient,
     language: str,
     solution: str,
     boilerplate: str,
