@@ -10,7 +10,6 @@ import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Optional
 
 import discord
@@ -231,9 +230,9 @@ class Challenge(commands.Cog):
         self.bot = bot
         self.max_tests = positive_integer_env("MAX_TESTS", 30)
         self.hermes = HermesClient(
-            base_url=os.getenv("HERMES_URL", "http://127.0.0.1:8000"),
-            api_token=load_hermes_token(),
-            timeout_seconds=positive_integer_env("HERMES_TIMEOUT_MS", 15000) / 1000,
+            base_url=os.getenv("EXECUTION_API_URL", "http://127.0.0.1:8000"),
+            api_token=os.getenv("EXECUTION_API_KEY") or None,
+            timeout_seconds=positive_integer_env("EXECUTION_API_TIMEOUT_MS", 15000) / 1000,
         )
 
     async def cog_load(self):
@@ -681,29 +680,6 @@ def positive_integer_env(name: str, fallback: int) -> int:
     if value <= 0:
         raise RuntimeError(f"{name} must be a positive integer.")
     return value
-
-
-def load_hermes_token() -> Optional[str]:
-    token = os.getenv("HERMES_API_TOKEN") or None
-    token_file = os.getenv("HERMES_API_TOKEN_FILE")
-
-    if not token_file:
-        return token
-
-    path = Path(token_file)
-    if not path.is_absolute():
-        path = Path.cwd() / path
-        if not path.exists():
-            project_root = Path(__file__).resolve().parents[3]
-            fallback = project_root / token_file
-            if fallback.exists():
-                path = fallback
-
-    contents = path.read_text(encoding="utf-8")
-    match = re.search(r"^API_TOKEN=(.*)$", contents, flags=re.MULTILINE)
-    if not match or not match.group(1).strip():
-        raise RuntimeError("HERMES_API_TOKEN_FILE does not contain API_TOKEN.")
-    return match.group(1).strip()
 
 
 def parse_jsonish(value: Any) -> Any:
