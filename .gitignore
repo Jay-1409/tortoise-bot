@@ -115,3 +115,5 @@ poetry.lock
 .mypy_cache/
 
 config/
+
+.DS_Store
