@@ -40,6 +40,7 @@ class Problem:
     guild_id: int
     slug: str
     title: str
+    statement: str
     points: int
     boilerplates: dict[str, str]
     tests: list[TestCase]
@@ -174,6 +175,55 @@ def is_moderator_role_name(name: str) -> bool:
     )
 
 
+def is_challenge_moderator_member(member: discord.Member) -> bool:
+    if member.guild.owner_id == member.id:
+        return True
+
+    if has_challenge_moderator_permissions(member.guild_permissions):
+        return True
+
+    moderator_role_ids = env_id_set("MODERATOR_ROLE_IDS")
+    for role in member.roles:
+        if role.id in moderator_role_ids or is_moderator_role_name(role.name):
+            return True
+
+    return False
+
+
+class SolutionSubmissionModal(discord.ui.Modal):
+    def __init__(
+        self,
+        *,
+        cog: "Challenge",
+        problem_slug: str,
+        language_value: str,
+        language_name: str,
+    ):
+        super().__init__(title="Submit solution")
+        self.cog = cog
+        self.problem_slug = problem_slug
+        self.language_value = language_value
+        self.language_name = language_name
+        self.solution = discord.ui.TextInput(
+            label="Function implementation",
+            style=discord.TextStyle.paragraph,
+            placeholder="Paste only the function implementation here.",
+            required=True,
+            max_length=4000,
+        )
+        self.add_item(self.solution)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        await self.cog.process_submission(
+            interaction=interaction,
+            problem_slug=self.problem_slug,
+            language_value=self.language_value,
+            language_name=self.language_name,
+            submitted_code=str(self.solution.value),
+        )
+
+
 async def get_member_debug(interaction: discord.Interaction) -> str:
     if interaction.guild is None:
         return "Guild: none"
@@ -236,6 +286,7 @@ class Challenge(commands.Cog):
                 guild_id BIGINT NOT NULL,
                 slug TEXT NOT NULL,
                 title TEXT NOT NULL,
+                statement TEXT NOT NULL DEFAULT '',
                 points INTEGER NOT NULL CHECK(points > 0),
                 boilerplates JSONB NOT NULL,
                 tests JSONB NOT NULL,
@@ -284,6 +335,7 @@ class Challenge(commands.Cog):
     @app_commands.command(name="problem-add", description="Create or update a coding problem.")
     @app_commands.describe(
         title="Problem title.",
+        statement="Markdown/text file containing the full problem statement.",
         python_boilerplate="Python driver/starter file containing {{SOLUTION}}.",
         javascript_boilerplate="JavaScript driver/starter file containing {{SOLUTION}}.",
         cpp_boilerplate="C++ driver/starter file containing {{SOLUTION}}.",
@@ -295,6 +347,7 @@ class Challenge(commands.Cog):
         self,
         interaction: discord.Interaction,
         title: app_commands.Range[str, 2, 100],
+        statement: discord.Attachment,
         python_boilerplate: discord.Attachment,
         javascript_boilerplate: discord.Attachment,
         cpp_boilerplate: discord.Attachment,
@@ -302,13 +355,15 @@ class Challenge(commands.Cog):
         test_inputs: discord.Attachment,
         expected_outputs: discord.Attachment,
     ):
+        await interaction.response.defer(ephemeral=True)
+
         if not await check_if_challenge_moderator(interaction):
             debug = await get_member_debug(interaction)
             role_hint = (
                 f"\n\nYour user ID: `{interaction.user.id}`"
                 f"\n{debug}"
             )
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=failure(
                     "You need a moderator/admin/staff role, Manage Server, or moderation permissions "
                     f"to add problems.{role_hint}"
@@ -317,9 +372,11 @@ class Challenge(commands.Cog):
             )
             return
 
-        await interaction.response.defer(ephemeral=True)
-
         try:
+            problem_statement = await download_text(statement, max_bytes=100_000)
+            if not problem_statement.strip():
+                raise ValueError("problem statement cannot be empty.")
+
             boilerplates = {
                 "python": await download_text(python_boilerplate, max_bytes=100_000),
                 "javascript": await download_text(javascript_boilerplate, max_bytes=100_000),
@@ -339,6 +396,7 @@ class Challenge(commands.Cog):
                 guild_id=interaction.guild_id,
                 slug=slug,
                 title=str(title),
+                statement=problem_statement,
                 boilerplates=boilerplates,
                 tests=tests,
                 created_by=interaction.user.id,
@@ -354,6 +412,25 @@ class Challenge(commands.Cog):
                 f"with **{len(tests)}** hidden test(s). A full pass awards **100 points**."
             ),
             ephemeral=True,
+        )
+
+    @commands.command(name="sync")
+    @commands.guild_only()
+    async def sync_prefix(self, ctx: commands.Context):
+        if not isinstance(ctx.author, discord.Member) or not is_challenge_moderator_member(ctx.author):
+            await ctx.reply(
+                embed=failure("You need a moderator/admin/staff role or moderation permissions to sync commands."),
+                mention_author=False,
+            )
+            return
+
+        synced = await self.bot.tree.sync()
+        command_names = ", ".join(f"`/{command.name}`" for command in synced) or "none"
+        await ctx.reply(
+            embed=success(
+                f"Globally synced **{len(synced)}** application command(s): {command_names}"
+            ),
+            mention_author=False,
         )
 
     @app_commands.command(name="problems", description="List active coding problems.")
@@ -395,11 +472,28 @@ class Challenge(commands.Cog):
             )
             return
 
-        filename = f"{selected.slug}-{language.value}-starter.txt"
-        file = discord.File(io.BytesIO(boilerplate.encode("utf-8")), filename=filename)
+        statement_file = discord.File(
+            io.BytesIO(selected.statement.encode("utf-8")),
+            filename=f"{selected.slug}-statement.md",
+        )
+        starter_file = discord.File(
+            io.BytesIO(boilerplate.encode("utf-8")),
+            filename=f"{selected.slug}-{language.value}-starter.txt",
+        )
+        preview = selected.statement.strip()
+        if len(preview) > 3800:
+            preview = f"{preview[:3800].rstrip()}\n\n… full statement attached."
+        embed = discord.Embed(
+            title=selected.title,
+            description=preview or "Problem statement attached.",
+            color=discord.Color.green(),
+        )
+        embed.add_field(name="Points", value=str(selected.points), inline=True)
+        embed.add_field(name="Language", value=language.name, inline=True)
+        embed.set_footer(text="Download the starter file, implement the requested function, then use /submit.")
         await interaction.response.send_message(
-            content=f"**{selected.title}** · {selected.points} points · {language.name}",
-            file=file,
+            embed=embed,
+            files=[statement_file, starter_file],
             ephemeral=True,
         )
 
@@ -420,24 +514,68 @@ class Challenge(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
 
-        selected = await self.get_problem(interaction.guild_id, clean_slug(problem))
+        try:
+            submitted_code = await download_text(solution, max_bytes=100_000)
+        except Exception as exc:
+            await interaction.followup.send(embed=failure(f"Could not read solution file: {exc}"), ephemeral=True)
+            return
+
+        await self.process_submission(
+            interaction=interaction,
+            problem_slug=clean_slug(problem),
+            language_value=language.value,
+            language_name=language.name,
+            submitted_code=submitted_code,
+        )
+
+    @app_commands.command(name="submit-code", description="Submit a solution by pasting code into a popup form.")
+    @app_commands.autocomplete(problem=challenge_problem_autocomplete)
+    @app_commands.choices(language=LANGUAGE_CHOICES)
+    @app_commands.describe(
+        problem="Problem title.",
+        language="Language of your submitted function.",
+    )
+    async def submit_code(
+        self,
+        interaction: discord.Interaction,
+        problem: str,
+        language: app_commands.Choice[str],
+    ):
+        await interaction.response.send_modal(
+            SolutionSubmissionModal(
+                cog=self,
+                problem_slug=clean_slug(problem),
+                language_value=language.value,
+                language_name=language.name,
+            )
+        )
+
+    async def process_submission(
+        self,
+        *,
+        interaction: discord.Interaction,
+        problem_slug: str,
+        language_value: str,
+        language_name: str,
+        submitted_code: str,
+    ):
+        selected = await self.get_problem(interaction.guild_id, problem_slug)
         if selected is None:
             await interaction.followup.send(embed=failure("Problem not found."), ephemeral=True)
             return
 
-        boilerplate = selected.boilerplates.get(language.value)
+        boilerplate = selected.boilerplates.get(language_value)
         if boilerplate is None:
             await interaction.followup.send(
-                embed=failure(f"No {language.name} boilerplate is configured for this problem."),
+                embed=failure(f"No {language_name} boilerplate is configured for this problem."),
                 ephemeral=True,
             )
             return
 
         try:
-            submitted_code = await download_text(solution, max_bytes=100_000)
             result = await judge_submission(
                 hermes=self.hermes,
-                language=language.value,
+                language=language_value,
                 solution=submitted_code,
                 boilerplate=boilerplate,
                 tests=selected.tests,
@@ -460,7 +598,7 @@ class Challenge(commands.Cog):
             guild_id=interaction.guild_id,
             slug=selected.slug,
             user_id=interaction.user.id,
-            language=language.value,
+            language=language_value,
             status="accepted" if result.accepted else "rejected",
             passed=result.passed,
             total=result.total,
@@ -537,6 +675,7 @@ class Challenge(commands.Cog):
         guild_id: int,
         slug: str,
         title: str,
+        statement: str,
         boilerplates: dict[str, str],
         tests: list[TestCase],
         created_by: int,
@@ -544,11 +683,12 @@ class Challenge(commands.Cog):
         await self.bot.db.pool.execute(
             """
             INSERT INTO challenge_problems
-                (guild_id, slug, title, points, boilerplates, tests, created_by)
-            VALUES ($1, $2, $3, 100, $4::jsonb, $5::jsonb, $6)
+                (guild_id, slug, title, statement, points, boilerplates, tests, created_by)
+            VALUES ($1, $2, $3, $4, 100, $5::jsonb, $6::jsonb, $7)
             ON CONFLICT (guild_id, slug)
             DO UPDATE SET
                 title = EXCLUDED.title,
+                statement = EXCLUDED.statement,
                 points = EXCLUDED.points,
                 boilerplates = EXCLUDED.boilerplates,
                 tests = EXCLUDED.tests,
@@ -559,6 +699,7 @@ class Challenge(commands.Cog):
             guild_id,
             slug,
             title,
+            statement,
             json.dumps(boilerplates),
             json.dumps([
                 {"name": test.name, "input": test.input, "expected": test.expected}
@@ -570,7 +711,7 @@ class Challenge(commands.Cog):
     async def get_problem(self, guild_id: int, slug: str) -> Optional[Problem]:
         row = await self.bot.db.pool.fetchrow(
             """
-            SELECT guild_id, slug, title, points, boilerplates, tests
+            SELECT guild_id, slug, title, statement, points, boilerplates, tests
             FROM challenge_problems
             WHERE guild_id = $1 AND slug = $2 AND active = TRUE
             """,
@@ -585,6 +726,7 @@ class Challenge(commands.Cog):
             guild_id=row["guild_id"],
             slug=row["slug"],
             title=row["title"],
+            statement=row["statement"],
             points=row["points"],
             boilerplates=dict(parse_jsonish(row["boilerplates"])),
             tests=[
