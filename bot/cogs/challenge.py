@@ -220,8 +220,8 @@ class Challenge(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.max_tests = positive_integer_env("MAX_TESTS", 30)
-        self.hermes = ExecutionApiClient(
-            url=os.getenv("EXECUTION_API_URL", "http://127.0.0.1:8000/execute/"),
+        self.hermes = HermesClient(
+            base_url=os.getenv("EXECUTION_API_URL", "http://127.0.0.1:8000/execute"),
             api_token=os.getenv("EXECUTION_API_KEY") or None,
             timeout_seconds=positive_integer_env("EXECUTION_API_TIMEOUT_MS", 15000) / 1000,
         )
