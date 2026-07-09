@@ -29,7 +29,10 @@ DB_URL = os.getenv("DATABASE_URL")
 
 class Bot(commands.Bot):
     # If not empty then only these will be loaded. Good for local debugging. If empty all found are loaded.
-    allowed_extensions = ()
+    allowed_extensions = (
+        "challenge",
+        "leaderboard",
+    )
     banned_extensions = (
         "advent_of_code",
         "documentation",
