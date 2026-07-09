@@ -56,6 +56,8 @@ resources_channel_id = 577195878620725251
 challenge_submission_channel_id = 780842875901575228
 challenge_discussion_channel_id = 781129674860003336
 challenges_channel_id = 780841435712716800
+challenge_logs_channel_id = challenge_submission_channel_id
+challenge_logs_channel_name = "challenge-logs"
 bait_channel_id = 1461666781612740750
 introduction_channel_id = 1487413734056923236
 join_a_team_channel_id = 1489264049983197246
@@ -216,6 +218,95 @@ stay_emoji_id = 755717238732095562
 double_emoji_id = 755715816657518622
 blank_card_emoji = "<:card:755715225642336287>"
 staff_application_emoji_id = 1485325243043283075
+
+# Challenge system
+challenge_supported_languages = (
+    ("Python", "python"),
+    ("JavaScript", "javascript"),
+    ("C++", "cpp"),
+    ("Java", "java"),
+)
+challenge_supported_language_values = tuple(
+    language_value for _, language_value in challenge_supported_languages
+)
+challenge_moderator_role_ids = (
+    moderator_role_id,
+    admin_role_id,
+    jr_moderator_role_id,
+)
+challenge_moderator_role_names = (
+    "moderator",
+    "moderators",
+    "mod",
+    "mods",
+    "admin",
+    "admins",
+    "staff",
+)
+challenge_moderator_role_name_contains = "moderator"
+challenge_default_points = 100
+challenge_test_reveal_cost = 50
+challenge_default_max_tests = 30
+challenge_problem_title_min_length = 2
+challenge_problem_title_max_length = 100
+challenge_autocomplete_choice_max_length = 100
+challenge_statement_max_bytes = 100_000
+challenge_boilerplate_max_bytes = 100_000
+challenge_submission_max_bytes = 100_000
+challenge_tests_max_bytes = 500_000
+challenge_modal_submission_max_length = 4000
+challenge_execution_api_default_url = "http://127.0.0.1:8000/execute"
+challenge_execution_api_default_timeout_ms = 15000
+challenge_pipeline_smoke_tests = {
+    "python": {
+        "name": "Python",
+        "solution": "def add(a, b):\n    return a + b\n",
+        "boilerplate": "{{SOLUTION}}\na, b = map(int, input().split())\nprint(add(a, b))\n",
+    },
+    "javascript": {
+        "name": "JavaScript",
+        "solution": "function add(a, b) {\n  return a + b;\n}\n",
+        "boilerplate": (
+            "{{SOLUTION}}\n"
+            "const fs = require('fs');\n"
+            "const [a, b] = fs.readFileSync(0, 'utf8').trim().split(/\\s+/).map(Number);\n"
+            "console.log(add(a, b));\n"
+        ),
+    },
+    "cpp": {
+        "name": "C++",
+        "solution": "int add(int a, int b) {\n    return a + b;\n}\n",
+        "boilerplate": (
+            "#include <iostream>\n"
+            "using namespace std;\n"
+            "{{SOLUTION}}\n"
+            "int main() {\n"
+            "    int a, b;\n"
+            "    cin >> a >> b;\n"
+            "    cout << add(a, b);\n"
+            "    return 0;\n"
+            "}\n"
+        ),
+    },
+    "java": {
+        "name": "Java",
+        "solution": "static int add(int a, int b) {\n    return a + b;\n}\n",
+        "boilerplate": (
+            "public class Main {\n"
+            "    {{SOLUTION}}\n"
+            "    public static void main(String[] args) throws Exception {\n"
+            "        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n"
+            "        String[] parts = br.readLine().trim().split(\"\\\\s+\");\n"
+            "        System.out.print(add(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));\n"
+            "    }\n"
+            "}\n"
+        ),
+    },
+}
+challenge_pipeline_smoke_test_cases = (
+    ("Smoke Test 1", "2 3\n", "5"),
+    ("Smoke Test 2", "-10 7\n", "-3"),
+)
 
 # Auto mod rulesets
 racial_and_transphobic_rule_id = 1461221874540347577
@@ -472,4 +563,3 @@ What you’re looking for here:
 Fun fact (optional):
 ```
 """
-

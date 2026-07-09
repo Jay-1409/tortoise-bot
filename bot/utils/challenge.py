@@ -10,8 +10,7 @@ from typing import Any, Optional
 import aiohttp
 import discord
 
-
-SUPPORTED_LANGUAGES = ("python", "javascript", "cpp", "java")
+from bot.constants import challenge_supported_language_values
 
 
 @dataclass(slots=True)
@@ -62,7 +61,7 @@ class ExecutionApiClient:
         self.timeout_seconds = timeout_seconds
 
     async def execute(self, language: str, code: str) -> ExecutionResult:
-        if language not in SUPPORTED_LANGUAGES:
+        if language not in challenge_supported_language_values:
             raise ValueError(f"Unsupported language: {language}")
 
         headers = {}

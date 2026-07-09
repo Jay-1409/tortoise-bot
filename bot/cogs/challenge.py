@@ -10,6 +10,29 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from bot.constants import (
+    challenge_boilerplate_max_bytes,
+    challenge_default_max_tests,
+    challenge_default_points,
+    challenge_execution_api_default_timeout_ms,
+    challenge_execution_api_default_url,
+    challenge_logs_channel_id,
+    challenge_logs_channel_name,
+    challenge_modal_submission_max_length,
+    challenge_moderator_role_name_contains,
+    challenge_moderator_role_names,
+    challenge_moderator_role_ids,
+    challenge_pipeline_smoke_test_cases,
+    challenge_pipeline_smoke_tests,
+    challenge_problem_title_max_length,
+    challenge_problem_title_min_length,
+    challenge_statement_max_bytes,
+    challenge_submission_max_bytes,
+    challenge_supported_languages,
+    challenge_test_reveal_cost,
+    challenge_tests_max_bytes,
+    challenge_autocomplete_choice_max_length,
+)
 from bot.utils.challenge import (
     ExecutionApiClient,
     Problem,
@@ -28,63 +51,14 @@ from bot.utils.embed_handler import failure, info, success, warning
 logger = logging.getLogger(__name__)
 
 LANGUAGE_CHOICES = [
-    app_commands.Choice(name="Python", value="python"),
-    app_commands.Choice(name="JavaScript", value="javascript"),
-    app_commands.Choice(name="C++", value="cpp"),
-    app_commands.Choice(name="Java", value="java"),
+    app_commands.Choice(name=name, value=value)
+    for name, value in challenge_supported_languages
 ]
 
 PIPELINE_LANGUAGE_CHOICES = [
     app_commands.Choice(name="All languages", value="all"),
     *LANGUAGE_CHOICES,
 ]
-
-PIPELINE_SMOKE_TESTS = {
-    "python": {
-        "name": "Python",
-        "solution": "def add(a, b):\n    return a + b\n",
-        "boilerplate": "{{SOLUTION}}\na, b = map(int, input().split())\nprint(add(a, b))\n",
-    },
-    "javascript": {
-        "name": "JavaScript",
-        "solution": "function add(a, b) {\n  return a + b;\n}\n",
-        "boilerplate": (
-            "{{SOLUTION}}\n"
-            "const fs = require('fs');\n"
-            "const [a, b] = fs.readFileSync(0, 'utf8').trim().split(/\\s+/).map(Number);\n"
-            "console.log(add(a, b));\n"
-        ),
-    },
-    "cpp": {
-        "name": "C++",
-        "solution": "int add(int a, int b) {\n    return a + b;\n}\n",
-        "boilerplate": (
-            "#include <iostream>\n"
-            "using namespace std;\n"
-            "{{SOLUTION}}\n"
-            "int main() {\n"
-            "    int a, b;\n"
-            "    cin >> a >> b;\n"
-            "    cout << add(a, b);\n"
-            "    return 0;\n"
-            "}\n"
-        ),
-    },
-    "java": {
-        "name": "Java",
-        "solution": "static int add(int a, int b) {\n    return a + b;\n}\n",
-        "boilerplate": (
-            "public class Main {\n"
-            "    {{SOLUTION}}\n"
-            "    public static void main(String[] args) throws Exception {\n"
-            "        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n"
-            "        String[] parts = br.readLine().trim().split(\"\\\\s+\");\n"
-            "        System.out.print(add(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));\n"
-            "    }\n"
-            "}\n"
-        ),
-    },
-}
 
 
 async def challenge_problem_autocomplete(
@@ -123,11 +97,7 @@ async def check_if_challenge_moderator(interaction: discord.Interaction) -> bool
     if any(is_moderator_role_name(role.name) for role in member.roles):
         return True
 
-    moderator_role_ids = env_id_set("MODERATOR_ROLE_IDS")
-    if not moderator_role_ids:
-        return False
-
-    return any(role.id in moderator_role_ids for role in member.roles)
+    return any(role.id in challenge_moderator_role_ids for role in member.roles)
 
 
 def has_challenge_moderator_permissions(permissions: discord.Permissions) -> bool:
@@ -141,19 +111,11 @@ def has_challenge_moderator_permissions(permissions: discord.Permissions) -> boo
     )
 
 
-def env_id_set(name: str) -> set[int]:
-    return {
-        int(value.strip())
-        for value in os.getenv(name, "").split(",")
-        if value.strip().isdigit()
-    }
-
-
 def is_moderator_role_name(name: str) -> bool:
     normalized = re.sub(r"[^a-z0-9]+", "", name.lower())
     return (
-        normalized in {"moderator", "moderators", "mod", "mods", "admin", "admins", "staff"}
-        or "moderator" in normalized
+        normalized in challenge_moderator_role_names
+        or challenge_moderator_role_name_contains in normalized
     )
 
 
@@ -164,9 +126,8 @@ def is_challenge_moderator_member(member: discord.Member) -> bool:
     if has_challenge_moderator_permissions(member.guild_permissions):
         return True
 
-    moderator_role_ids = env_id_set("MODERATOR_ROLE_IDS")
     for role in member.roles:
-        if role.id in moderator_role_ids or is_moderator_role_name(role.name):
+        if role.id in challenge_moderator_role_ids or is_moderator_role_name(role.name):
             return True
 
     return False
@@ -191,7 +152,7 @@ class SolutionSubmissionModal(discord.ui.Modal):
             style=discord.TextStyle.paragraph,
             placeholder="Paste only the function implementation here.",
             required=True,
-            max_length=4000,
+            max_length=challenge_modal_submission_max_length,
         )
         self.add_item(self.solution)
 
@@ -237,7 +198,7 @@ class RevealTestsConfirmView(discord.ui.View):
             await interaction.response.edit_message(
                 embed=warning(
                     "Second confirmation required.\n\n"
-                    "Revealing these hidden test cases costs **50 points** the first time "
+                    f"Revealing these hidden test cases costs **{challenge_test_reveal_cost} points** the first time "
                     "you reveal this problem. Press the red button again to continue."
                 ),
                 view=self,
@@ -299,11 +260,14 @@ class Challenge(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.max_tests = positive_integer_env("MAX_TESTS", 30)
+        self.max_tests = challenge_default_max_tests
         self.hermes = ExecutionApiClient(
-            url=os.getenv("EXECUTION_API_URL", "http://127.0.0.1:8000/execute"),
+            url=os.getenv("EXECUTION_API_URL", challenge_execution_api_default_url),
             api_token=os.getenv("EXECUTION_API_KEY") or None,
-            timeout_seconds=positive_integer_env("EXECUTION_API_TIMEOUT_MS", 15000) / 1000,
+            timeout_seconds=positive_integer_env(
+                "EXECUTION_API_TIMEOUT_MS",
+                challenge_execution_api_default_timeout_ms,
+            ) / 1000,
         )
 
     async def cog_load(self):
@@ -376,7 +340,7 @@ class Challenge(commands.Cog):
     async def problem_add(
         self,
         interaction: discord.Interaction,
-        title: app_commands.Range[str, 2, 100],
+        title: app_commands.Range[str, challenge_problem_title_min_length, challenge_problem_title_max_length],
         statement: discord.Attachment,
         python_boilerplate: discord.Attachment,
         javascript_boilerplate: discord.Attachment,
@@ -403,22 +367,22 @@ class Challenge(commands.Cog):
             return
 
         try:
-            problem_statement = await download_text(statement, max_bytes=100_000)
+            problem_statement = await download_text(statement, max_bytes=challenge_statement_max_bytes)
             if not problem_statement.strip():
                 raise ValueError("problem statement cannot be empty.")
 
             boilerplates = {
-                "python": await download_text(python_boilerplate, max_bytes=100_000),
-                "javascript": await download_text(javascript_boilerplate, max_bytes=100_000),
-                "cpp": await download_text(cpp_boilerplate, max_bytes=100_000),
-                "java": await download_text(java_boilerplate, max_bytes=100_000),
+                "python": await download_text(python_boilerplate, max_bytes=challenge_boilerplate_max_bytes),
+                "javascript": await download_text(javascript_boilerplate, max_bytes=challenge_boilerplate_max_bytes),
+                "cpp": await download_text(cpp_boilerplate, max_bytes=challenge_boilerplate_max_bytes),
+                "java": await download_text(java_boilerplate, max_bytes=challenge_boilerplate_max_bytes),
             }
             for language, boilerplate in boilerplates.items():
                 if "{{SOLUTION}}" not in boilerplate:
                     raise ValueError(f"{language} boilerplate must contain a {{SOLUTION}} marker.")
 
-            inputs_text = await download_text(test_inputs, max_bytes=500_000)
-            outputs_text = await download_text(expected_outputs, max_bytes=500_000)
+            inputs_text = await download_text(test_inputs, max_bytes=challenge_tests_max_bytes)
+            outputs_text = await download_text(expected_outputs, max_bytes=challenge_tests_max_bytes)
             tests = parse_test_files(inputs_text, outputs_text, self.max_tests)
 
             slug = slug_from_title(str(title))
@@ -439,7 +403,7 @@ class Challenge(commands.Cog):
         await interaction.followup.send(
             embed=success(
                 f"Saved **{title}** for Python, JavaScript, C++, and Java "
-                f"with **{len(tests)}** hidden test(s). A full pass awards **100 points**."
+                f"with **{len(tests)}** hidden test(s). A full pass awards **{challenge_default_points} points**."
             ),
             ephemeral=True,
         )
@@ -545,7 +509,7 @@ class Challenge(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            submitted_code = await download_text(solution, max_bytes=100_000)
+            submitted_code = await download_text(solution, max_bytes=challenge_submission_max_bytes)
         except Exception as exc:
             await interaction.followup.send(embed=failure(f"Could not read solution file: {exc}"), ephemeral=True)
             return
@@ -604,11 +568,11 @@ class Challenge(commands.Cog):
             return
 
         tests = [
-            TestCase(name="Smoke Test 1", input="2 3\n", expected="5"),
-            TestCase(name="Smoke Test 2", input="-10 7\n", expected="-3"),
+            TestCase(name=name, input=test_input, expected=expected)
+            for name, test_input, expected in challenge_pipeline_smoke_test_cases
         ]
         language_values = (
-            list(PIPELINE_SMOKE_TESTS.keys())
+            list(challenge_pipeline_smoke_tests.keys())
             if language is None or language.value == "all"
             else [language.value]
         )
@@ -616,7 +580,7 @@ class Challenge(commands.Cog):
         results = []
         total_started_at = time.perf_counter()
         for language_value in language_values:
-            sample = PIPELINE_SMOKE_TESTS[language_value]
+            sample = challenge_pipeline_smoke_tests[language_value]
             started_at = time.perf_counter()
             result = await judge_submission(
                 hermes=self.hermes,
@@ -669,7 +633,7 @@ class Challenge(commands.Cog):
             ephemeral=True,
         )
 
-    @app_commands.command(name="reveal-tests-cases", description="Reveal hidden test cases for a problem for 50 points.")
+    @app_commands.command(name="reveal-tests-cases", description="Reveal hidden test cases for a problem for points.")
     @app_commands.autocomplete(problem=challenge_problem_autocomplete)
     @app_commands.describe(problem="Problem title.")
     async def reveal_tests_cases(self, interaction: discord.Interaction, problem: str):
@@ -686,7 +650,7 @@ class Challenge(commands.Cog):
         cost_message = (
             "You have already revealed this problem before, so revealing it again costs **0 points**."
             if already_revealed
-            else "This will deduct **50 points** from your score."
+            else f"This will deduct **{challenge_test_reveal_cost} points** from your score."
         )
 
         await interaction.response.send_message(
@@ -812,7 +776,7 @@ class Challenge(commands.Cog):
             if row["slug"] in seen:
                 continue
             seen.add(row["slug"])
-            choices.append(app_commands.Choice(name=row["title"][:100], value=row["slug"]))
+            choices.append(app_commands.Choice(name=row["title"][:challenge_autocomplete_choice_max_length], value=row["slug"]))
             if len(choices) >= 25:
                 break
 
@@ -833,7 +797,7 @@ class Challenge(commands.Cog):
             """
             INSERT INTO challenge_problems
                 (guild_id, slug, title, statement, points, boilerplates, tests, created_by)
-            VALUES ($1, $2, $3, $4, 100, $5::jsonb, $6::jsonb, $7)
+            VALUES ($1, $2, $3, $4, $8, $5::jsonb, $6::jsonb, $7)
             ON CONFLICT (guild_id, slug)
             DO UPDATE SET
                 title = EXCLUDED.title,
@@ -855,6 +819,7 @@ class Challenge(commands.Cog):
                 for test in tests
             ]),
             created_by,
+            challenge_default_points,
         )
 
     async def get_problem(self, guild_id: int, slug: str) -> Optional[Problem]:
@@ -963,11 +928,12 @@ class Challenge(commands.Cog):
             """
             INSERT INTO challenge_submissions
                 (guild_id, problem_slug, user_id, language, status, passed_tests, total_tests, error_message)
-            VALUES ($1, $2, $3, 'reveal', 'tests_revealed', 0, 0, 'Deducted 50 points for revealing test cases')
+            VALUES ($1, $2, $3, 'reveal', 'tests_revealed', 0, 0, $4)
             """,
             guild_id,
             slug,
             user_id,
+            f"Deducted {challenge_test_reveal_cost} points for revealing test cases",
         )
         return True
 
@@ -983,14 +949,14 @@ class Challenge(commands.Cog):
             new_total = await self.bot.points_manager.remove_points(
                 interaction.guild_id,
                 interaction.user.id,
-                50,
+                challenge_test_reveal_cost,
             )
 
         payload = {
             "problem": problem.title,
             "slug": problem.slug,
             "revealed_by": interaction.user.id,
-            "points_deducted": 50 if should_deduct else 0,
+            "points_deducted": challenge_test_reveal_cost if should_deduct else 0,
             "tests": [
                 {
                     "name": test.name,
@@ -1008,7 +974,7 @@ class Challenge(commands.Cog):
         if should_deduct:
             message = (
                 f"Revealed hidden tests for **{problem.title}**. "
-                f"Deducted **50 points**. New total: **{new_total}**."
+                f"Deducted **{challenge_test_reveal_cost} points**. New total: **{new_total}**."
             )
         else:
             message = (
