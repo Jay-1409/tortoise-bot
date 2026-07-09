@@ -184,22 +184,6 @@ def is_moderator_role_name(name: str) -> bool:
     )
 
 
-async def get_member_role_names(interaction: discord.Interaction) -> list[str]:
-    if interaction.guild is None:
-        return []
-
-    member = interaction.user if isinstance(interaction.user, discord.Member) else None
-    if member is None:
-        member = interaction.guild.get_member(interaction.user.id)
-    if member is None:
-        try:
-            member = await interaction.guild.fetch_member(interaction.user.id)
-        except discord.HTTPException:
-            return []
-
-    return [role.name for role in member.roles if role.name != "@everyone"]
-
-
 async def get_member_debug(interaction: discord.Interaction) -> str:
     if interaction.guild is None:
         return "Guild: none"
