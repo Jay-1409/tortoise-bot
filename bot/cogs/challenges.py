@@ -15,7 +15,6 @@ from bot.constants import (
     challenge_default_points,
     challenge_execution_api_default_timeout_ms,
     challenge_execution_api_default_url,
-    challenge_log_channel_id,
     challenge_modal_submission_max_length,
     challenge_pipeline_smoke_test_cases,
     challenge_pipeline_smoke_tests,
@@ -62,7 +61,7 @@ async def challenge_problem_autocomplete(
     interaction: discord.Interaction,
     current: str,
 ) -> list[app_commands.Choice[str]]:
-    cog = interaction.client.get_cog("Challenge")
+    cog = interaction.client.get_cog("Challenges")
     if cog is None:
         return []
     return await cog.autocomplete_problem(interaction, current)
@@ -72,7 +71,7 @@ class SolutionSubmissionModal(discord.ui.Modal):
     def __init__(
         self,
         *,
-        cog: "Challenge",
+        cog: "Challenges",
         problem_slug: str,
         language_value: str,
         language_name: str,
@@ -101,9 +100,8 @@ class SolutionSubmissionModal(discord.ui.Modal):
             submitted_code=str(self.solution.value),
         )
 
-
 class RevealTestsConfirmView(discord.ui.View):
-    def __init__(self, *, cog: "Challenge", user_id: int, problem: Problem):
+    def __init__(self, *, cog: "Challenges", user_id: int, problem: Problem):
         super().__init__(timeout=120)
         self.cog = cog
         self.user_id = user_id
@@ -150,7 +148,7 @@ class RevealTestsConfirmView(discord.ui.View):
         await interaction.response.edit_message(embed=warning("Test case reveal cancelled."), view=self)
 
 
-class Challenge(commands.Cog):
+class Challenges(commands.Cog):
     """Automated coding challenges powered by Hermes Engine."""
 
     challenge_group = app_commands.Group(
@@ -864,4 +862,4 @@ class Challenge(commands.Cog):
         await interaction.followup.send(embed=success(message), file=file, ephemeral=True)
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Challenge(bot))
+    await bot.add_cog(Challenges(bot))
