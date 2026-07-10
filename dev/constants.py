@@ -1,10 +1,8 @@
 from aenum import Enum, NoAlias
 
 from discord import Color
-from decouple import config
 
-
-tortoise_guild_id = 577192344529404154
+tortoise_guild_id = 1520372691448889364
 ban_appeal_server_id = 1464188109364396169
 website_url = "https://www.tyxc.org/"
 privacy_url = "https://www.tyxc.org/privacy"
@@ -25,70 +23,66 @@ online_viewer_url = "https://viewer.tyxc.org"
 bot_avatar_url = "https://lairesit.sirv.com/Tortoise/tortoise.png"
 
 # Channel IDs
-announcements_channel_id = 578197131526144024
+announcements_channel_id = 1522906040662757416
 
 # Log Channel IDs
-deterrence_log_channel_id = 1521908452837036104
-bot_log_channel_id = 1521907692745265343
-message_log_channel_id = 1521908191858917477
-user_log_channel_id = 1521910276272816138
-team_log_channel_id = 1521951592189001768
-challenge_log_channel_id = 1521954677770420245
-role_progression_log_channel_id = 1522592723331190965
+deterrence_log_channel_id = 1522646380462608434
+bot_log_channel_id = 1522646330663764061
+message_log_channel_id = 1522646466643099820
+user_log_channel_id = 1522646515477119077
+team_log_channel_id = 1522646585039913240
+challenge_log_channel_id = 1522646623967117333
+role_progression_log_channel_id = 1522646678899916831
 
 mod_mail_log_channel_id = bot_log_channel_id
 bug_reports_log_channel_id = bot_log_channel_id
 code_submissions_log_channel_id = bot_log_channel_id
 
-bot_dev_channel_id = 692851221223964822
-general_channel_id = 577192344533598472
-staff_channel_id = 580809054067097600
+bot_dev_channel_id = 1520372693155971105
+general_channel_id = 1520372692446871668
+staff_channel_id = 1520372692090359890
 
 #Tortoise Guild channels
-leetcode_channel_id = 726403782740541470
-bot_cmd_channel_id = 581726653710073858
-project_showcase_channel_id = 581156991557304330
-resources_channel_id = 577195878620725251
-challenge_submission_channel_id = 780842875901575228
-challenge_discussion_channel_id = 781129674860003336
-challenges_channel_id = 780841435712716800
-challenge_logs_channel_id = challenge_submission_channel_id
-challenge_logs_channel_name = "challenge-logs"
-bait_channel_id = 1461666781612740750
-introduction_channel_id = 1487413734056923236
-join_a_team_channel_id = 1489264049983197246
+leetcode_channel_id = 1520372692446871674
+bot_cmd_channel_id = 1520372692446871671
+project_showcase_channel_id = 1520372692446871670
+resources_channel_id = 1520372692090359895
+challenge_submission_channel_id = 1520372692820426866
+challenge_discussion_channel_id = 1520372692820426867
+challenges_channel_id = 1522906649973751898
+bait_channel_id = 1520372693294125167
+introduction_channel_id = 1520372692090359897
+join_a_team_channel_id = 1520372692446871665
 
 # Ban Appeal Channels
 ban_appeal_channel_id = 1464188530396893336
 
 # Message id
-teams_dashboard_message_id = 1489264468168016054
+teams_dashboard_message_id = 1523585450311417876
 
 # Roles
-muted_role_id = 707007421066772530
-verified_role_id = 599647985198039050
-trusted_role_id = 703657957438652476
-moderator_role_id = 577368219875278849
-admin_role_id = 577196762691928065
-new_member_role_id = 1441848294828670978
-challenger_role_id = 781210603997757471
-wizard_role_id = 1472794198053879809
-contributor_role_id = 649630145304461312
-accepting_team_invites_role_id = 1488893079053144184
-jr_moderator_role_id = 1510378507450974351
+trusted_role_id = 1520372691469729955
+moderator_role_id = 1520372691469729959
+admin_role_id = 1520372691486638113
+new_member_role_id = 1520372691448889372
+challenger_role_id = 1520372691457020016
+wizard_role_id = 1520372691469729956
+contributor_role_id = 1520372691469729952
+accepting_team_invites_role_id = 1520372691448889369
+jr_moderator_role_id = 1520372691469729958
 
 
-active_role_id = 1482843939978481889
-active_plus_role_id = 1482844032488050921
-chronically_online_role_id = 1511005709653770242
-needs_to_touch_grass_role_id = 1511006001623470120
-boot_role_id = 1472793802740596839
-apprentice_role_id = 1472725760723648522
-fellow_role_id = 1472793939630358731
-elite_role_id = 1515787455184240722
+active_role_id = 1520372691457020017
+active_plus_role_id = 1520372691457020018
+chronically_online_role_id = 1520372691457020019
+needs_to_touch_grass_role_id = 1520372691457020020
+boot_role_id = 1520372691457020023
+apprentice_role_id = 1520372691457020024
+fellow_role_id = 1520372691469729953
+elite_role_id = 1520372691469729957
 
-mod_mail_ping_role_id = 1493890424518086807
-bot_trap_role_id = 1505158956811685908
+mod_mail_ping_role_id = 1520372691448889367
+bot_trap_role_id = 1520372691448889365
 
 promotable_roles = {
     wizard_role_id: "You are currently **#1 on the Challenges Leaderboard**, placing you at the top "
@@ -186,85 +180,6 @@ verified_emoji_id = 610713784268357632
 upvote_emoji_id = 741202481090002994
 staff_application_emoji_id = 1485325243043283075
 
-# Challenge system
-challenge_supported_languages = (
-    ("Python", "python"),
-    ("JavaScript", "javascript"),
-    ("C++", "cpp"),
-    ("Java", "java"),
-)
-challenge_supported_language_values = tuple(
-    language_value for _, language_value in challenge_supported_languages
-)
-challenge_moderator_role_ids = (
-    moderator_role_id,
-    admin_role_id,
-    jr_moderator_role_id,
-)
-challenge_default_points = 100
-challenge_test_reveal_cost = 50
-challenge_default_max_tests = 30
-challenge_problem_title_min_length = 2
-challenge_problem_title_max_length = 100
-challenge_autocomplete_choice_max_length = 100
-challenge_statement_max_bytes = 100_000
-challenge_boilerplate_max_bytes = 100_000
-challenge_submission_max_bytes = 100_000
-challenge_tests_max_bytes = 500_000
-challenge_modal_submission_max_length = 4000
-challenge_execution_api_default_url = "http://127.0.0.1:8000/execute"
-challenge_execution_api_default_timeout_ms = 15000
-challenge_pipeline_smoke_tests = {
-    "python": {
-        "name": "Python",
-        "solution": "def add(a, b):\n    return a + b\n",
-        "boilerplate": "{{SOLUTION}}\na, b = map(int, input().split())\nprint(add(a, b))\n",
-    },
-    "javascript": {
-        "name": "JavaScript",
-        "solution": "function add(a, b) {\n  return a + b;\n}\n",
-        "boilerplate": (
-            "{{SOLUTION}}\n"
-            "const fs = require('fs');\n"
-            "const [a, b] = fs.readFileSync(0, 'utf8').trim().split(/\\s+/).map(Number);\n"
-            "console.log(add(a, b));\n"
-        ),
-    },
-    "cpp": {
-        "name": "C++",
-        "solution": "int add(int a, int b) {\n    return a + b;\n}\n",
-        "boilerplate": (
-            "#include <iostream>\n"
-            "using namespace std;\n"
-            "{{SOLUTION}}\n"
-            "int main() {\n"
-            "    int a, b;\n"
-            "    cin >> a >> b;\n"
-            "    cout << add(a, b);\n"
-            "    return 0;\n"
-            "}\n"
-        ),
-    },
-    "java": {
-        "name": "Java",
-        "solution": "static int add(int a, int b) {\n    return a + b;\n}\n",
-        "boilerplate": (
-            "public class Main {\n"
-            "    {{SOLUTION}}\n"
-            "    public static void main(String[] args) throws Exception {\n"
-            "        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n"
-            "        String[] parts = br.readLine().trim().split(\"\\\\s+\");\n"
-            "        System.out.print(add(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));\n"
-            "    }\n"
-            "}\n"
-        ),
-    },
-}
-challenge_pipeline_smoke_test_cases = (
-    ("Smoke Test 1", "2 3\n", "5"),
-    ("Smoke Test 2", "-10 7\n", "-3"),
-)
-
 # Auto mod rulesets
 racial_and_transphobic_rule_id = 1461221874540347577
 discord_advertisement_rule_id = 1443953991217057843
@@ -308,7 +223,7 @@ stack_overflow_icon = "https://cdn2.iconfinder.com/data/icons/social-icons-color
 
 
 # Special
-tortoise_developers = (197918569894379520, 612349409736392928)
+tortoise_developers = (612349409736392928, 529290942306320384, 1157899519422378034)
 
 # Embeds are not monospaced so we need to use spaces to make different lines "align"
 # But discord doesn't like spaces and strips them down.
@@ -458,6 +373,3 @@ What you’re looking for here:
 Fun fact (optional):
 ```
 """
-
-if config("DEVELOPMENT_MODE", cast=bool, default=False):
-    from dev.constants import * #noqa

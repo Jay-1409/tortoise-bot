@@ -1,7 +1,6 @@
 import itertools
 import asyncio
 import logging
-import os
 import subprocess
 import sys
 import traceback
@@ -12,9 +11,10 @@ import aiohttp.client_exceptions
 import discord
 from discord.abc import Messageable
 from discord.ext import commands, tasks
+from decouple import config
 
 from bot.api_client import TortoiseAPI
-from bot.constants import error_log_channel_id, system_log_channel_id, github_repo_link
+from bot.constants import bot_log_channel_id, github_repo_link
 from bot.manager import (
     Database, ProgressionManager, AFKManager, PointsManager, RetentionManager, TeamManager, GiveawayManager, DutyManager
 )
@@ -24,7 +24,7 @@ from bot.utils.error_handler import TortoiseCommandTree
 logger = logging.getLogger(__name__)
 console_logger = logging.getLogger("console")
 
-DB_URL = os.getenv("DATABASE_URL")
+DB_URL = config("DATABASE_URL")
 
 
 class Bot(commands.Bot):
@@ -41,7 +41,8 @@ class Bot(commands.Bot):
         "reddit",
         "tortoise_api",
         "utility",
-        "health"
+        "health",
+        "spam_filter"
     )
     build_version = "mystery-build"
     advanced_protection: bool = True
@@ -63,8 +64,7 @@ class Bot(commands.Bot):
             "event_submission": False,
             "mod_mail": True,
             "bug_report": False,
-            "suggestions": False,
-            "staff_application": True,
+            "staff_application": False,
         }
         self.suppressed_deletes = set()
         self._status_cycle = itertools.cycle([
@@ -86,7 +86,7 @@ class Bot(commands.Bot):
     @property
     def sys_log_channel(self) -> discord.TextChannel:
         if self._sys_log_channel is None:
-            self._sys_log_channel = self.get_channel(system_log_channel_id)
+            self._sys_log_channel = self.get_channel(bot_log_channel_id)
         return self._sys_log_channel
 
     @tasks.loop(minutes=1)
@@ -119,7 +119,7 @@ class Bot(commands.Bot):
                 stderr=subprocess.DEVNULL,
             ).decode().strip()
         except Exception:
-            commit_hash = os.getenv("BOT_BUILD_VERSION", "mystery-build")
+            commit_hash = config("BOT_BUILD_VERSION", "mystery-build")
             commit_message = ""
 
         self.build_version = commit_hash
@@ -134,7 +134,7 @@ class Bot(commands.Bot):
         except discord.Forbidden:
             pass
 
-    async def log(self, content: str, embed: discord.Embed) -> bool:
+    async def log(self, content: str = None, embed: discord.Embed = None) -> bool:
         try:
             await self.sys_log_channel.send(content=content, embed=embed)
             return True
@@ -155,26 +155,38 @@ class Bot(commands.Bot):
             return False
 
     async def setup_hook(self):
+
+        dev_mode = config("DEVELOPMENT_MODE", cast=bool, default=False)
+
+        if dev_mode and self.user.id == 712323581828136971:
+            console_logger.critical(
+                f"Production instance should not run on development mode."
+            )
+            await self.close()
+            sys.exit("Critical Shutdown: Prohibited bot instance detected in development environment.")
+
         self.api_client: TortoiseAPI = TortoiseAPI()
 
         self.db = Database(DB_URL)
-        await self.db.connect()
 
-        self.progression_manager = ProgressionManager(self.db)
-        self.afk_manager = AFKManager(self.db)
-        self.points_manager = PointsManager(self.db)
-        self.retention_manager = RetentionManager(self.db)
-        self.team_manager = TeamManager(self.db)
-        self.giveaway_manager = GiveawayManager(self.db)
-        self.duty_manager = DutyManager(self.db)
+        if not config("DISABLE_DB", cast=bool, default=False):
+            await self.db.connect()
 
-        await self.progression_manager.setup()
-        await self.afk_manager.setup()
-        await self.points_manager.setup()
-        await self.retention_manager.setup()
-        await self.team_manager.setup()
-        await self.giveaway_manager.setup()
-        await self.duty_manager.setup()
+            self.progression_manager = ProgressionManager(self.db)
+            self.afk_manager = AFKManager(self.db)
+            self.points_manager = PointsManager(self.db)
+            self.retention_manager = RetentionManager(self.db)
+            self.team_manager = TeamManager(self.db)
+            self.giveaway_manager = GiveawayManager(self.db)
+            self.duty_manager = DutyManager(self.db)
+
+            await self.progression_manager.setup()
+            await self.afk_manager.setup()
+            await self.points_manager.setup()
+            await self.retention_manager.setup()
+            await self.team_manager.setup()
+            await self.giveaway_manager.setup()
+            await self.duty_manager.setup()
 
         await self.load_extensions()
         # await self.reload_tortoise_meta_cache()
@@ -238,7 +250,7 @@ class Bot(commands.Bot):
         if not self.is_ready() or self.is_closed():
             return
 
-        error_log_channel = self.get_channel(error_log_channel_id)
+        error_log_channel = self.get_channel(bot_log_channel_id)
         split_messages = list(Bot.split_string_into_chunks(message, 1900))
 
         for count, message in enumerate(split_messages):

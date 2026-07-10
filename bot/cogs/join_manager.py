@@ -23,6 +23,7 @@ class JoinManager(commands.Cog):
         self.retention = bot.retention_manager
         self.custom_welcome_content = None
         self.ban_appeal_channel = None
+        self.user_log_channel = None
 
 
     def get_unbanned_embed(self):
@@ -41,7 +42,8 @@ class JoinManager(commands.Cog):
         self.guild = self.bot.get_guild(constants.tortoise_guild_id)
         self.ban_appeal_guild = self.bot.get_guild(constants.ban_appeal_server_id)
         self.tracker = invite_help.GuildInviteTracker(self.guild)
-        self.log_channel = self.bot.get_channel(constants.system_log_channel_id)
+        self.log_channel = self.bot.get_channel(constants.bot_log_channel_id)
+        self.user_log_channel = self.bot.get_channel(constants.user_log_channel_id)
         self.welcome_role = self.guild.get_role(constants.new_member_role_id)
         self.introduction_channel = self.guild.get_channel(constants.introduction_channel_id)
         self.ban_appeal_channel = self.ban_appeal_guild.get_channel(constants.ban_appeal_channel_id)
@@ -196,8 +198,8 @@ class JoinManager(commands.Cog):
 
         # Instantly ban any bots joining when bot protection is enabled.
         if member.bot and self.bot.advanced_protection:
-            await self.log_channel.send(embed=embed_handler.warning(f"{member.mention} bot was banned due to Advanced Protection™"))
-            await member.ban(reason="Advanced Protection™ enabled. Bot joins are prohibited.")
+            await self.log_channel.send(embed=embed_handler.warning(f"{member.mention} bot was banned due to Bot Protection™"))
+            await member.ban(reason="Bot Protection™ enabled. All bot joins are prohibited.")
             return
 
         await self.retention.add_join(member.guild.id)
@@ -228,7 +230,7 @@ class JoinManager(commands.Cog):
 
         await self._send_dm_message(member)
         await member.add_roles(self.welcome_role, reason="Welcome role added")
-        await self.log_channel.send(embed=embed_handler.welcome(member, msg))
+        await self.user_log_channel.send(embed=embed_handler.welcome(member, msg))
         await asyncio.sleep(60)
         await self.introduction_channel.send(
             content=f"Hi {member.mention}! Welcome to our server.\n"
@@ -257,7 +259,7 @@ class JoinManager(commands.Cog):
             f"**Joined at:** {joined_at}"
         )
 
-        await self.log_channel.send(embed=embed_handler.goodbye(member, msg))
+        await self.user_log_channel.send(embed=embed_handler.goodbye(member, msg))
 
 
     @tasks.loop(time=dtime(hour=0, minute=0, tzinfo=timezone.utc))
@@ -266,11 +268,7 @@ class JoinManager(commands.Cog):
         if not guild:
             return
 
-        channel = guild.get_channel(constants.system_log_channel_id)
-        if not channel:
-            return
-
-        joins, leaves = await self.retention.get_yesterday(guild.id)
+        joins, leaves, _ = await self.retention.get_yesterday(guild.id)
         net_change = joins - leaves
 
         if net_change > 0:
@@ -284,7 +282,7 @@ class JoinManager(commands.Cog):
             value = "0"
 
         try:
-            await channel.send(
+            await self.log_channel.send(
                 content=(
                     f"{emoji} **Daily Member Retention**\n"
                     f"Joins: **{joins}**\n"

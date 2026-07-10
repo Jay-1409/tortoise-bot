@@ -15,10 +15,20 @@ from bot.utils.embed_handler import success, warning, failure, info, infraction_
 
 logger = logging.getLogger(__name__)
 
+
+appeal_view = discord.ui.View()
+appeal_view.add_item(
+    discord.ui.Button(
+        label="Appeal Ban",
+        emoji=discord.PartialEmoji(name="appeal", id=1520010775845142548),
+        url=constants.appeal_server_link,
+    )
+)
+
 class DMModal(discord.ui.Modal, title="Send DM to Role"):
-    def __init__(self, role: discord.Role, interaction: discord.Interaction):
+    def __init__(self, messageable: Union[discord.Role, discord.Member], interaction: discord.Interaction):
         super().__init__()
-        self.role = role
+        self.messageable = messageable
         self.interaction = interaction
 
     message = discord.ui.TextInput(
@@ -31,16 +41,37 @@ class DMModal(discord.ui.Modal, title="Send DM to Role"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        members = (m for m in self.role.members if not m.bot)
-        failed_logs = []
-        failed_mentions = []
-        count = 0
-
-        for member in members:
+        if isinstance(self.messageable, discord.Member):
+            description = "# 📨 You have received a message\n\n" + self.message.value
             embed = discord.Embed(
-                title=f"Message for {self.role.name}",
+                title="",
+                description=description,
+                color=self.messageable.color
+            )
+            if interaction.guild.icon:
+                embed.set_footer(
+                    text=interaction.guild.name,
+                    icon_url=interaction.guild.icon.url
+                )
+
+            try:
+                await self.messageable.send(embed=embed)
+                await interaction.followup.send(
+                    embed=success(f"Successfully notified user.")
+                )
+            except Exception:
+                await interaction.followup.send(
+                    embed=success(f"Failed to notify user. DMs closed.")
+                )
+        else:
+            members = (m for m in self.messageable.members if not m.bot)
+            failed_logs = []
+            failed_mentions = []
+            count = 0
+            embed = discord.Embed(
+                title=f"Message for {self.messageable.name}",
                 description=self.message.value,
-                color=self.role.color
+                color=self.messageable.color
             )
 
             if interaction.guild.icon:
@@ -48,32 +79,32 @@ class DMModal(discord.ui.Modal, title="Send DM to Role"):
                     name=interaction.guild.name,
                     icon_url=interaction.guild.icon.url
                 )
-
-            try:
-                await member.send(embed=embed)
-                count += 1
-            except discord.HTTPException:
-                failed_mentions.append(member.mention)
-                failed_logs.append(str(member))
-
-        await interaction.followup.send(
-            embed=success(f"Successfully notified {count} users.")
-        )
-
-        if failed_mentions:
-            failed_str = "\n".join(failed_mentions)
-
-            if len(failed_str) > 4000:
-                failed_str = failed_str[:4000] + "..."
-
-            fail_embed = warning("Failed to notify users:\n\n" + failed_str)
+            for member in members:
+                try:
+                    await member.send(embed=embed)
+                    count += 1
+                except discord.HTTPException:
+                    failed_mentions.append(member.mention)
+                    failed_logs.append(str(member))
 
             await interaction.followup.send(
-                embed=fail_embed,
-                ephemeral=False
+                embed=success(f"Successfully notified {count} users.")
             )
 
-            logger.info(f"Failed to DM: {failed_logs}")
+            if failed_mentions:
+                failed_str = "\n".join(failed_mentions)
+
+                if len(failed_str) > 4000:
+                    failed_str = failed_str[:4000] + "..."
+
+                fail_embed = warning("Failed to notify users:\n\n" + failed_str)
+
+                await interaction.followup.send(
+                    embed=fail_embed,
+                    ephemeral=False
+                )
+
+                logger.info(f"Failed to DM: {failed_logs}")
 
 
 
@@ -82,7 +113,6 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._tortoise_guild = None
-        self._muted_role = None
         self._verified_role = None
         self._deterrence_log_channel = None
 
@@ -91,12 +121,6 @@ class Moderation(commands.Cog):
         if self._tortoise_guild is None:
             self._tortoise_guild = self.bot.get_guild(constants.tortoise_guild_id)
         return self._tortoise_guild
-
-    @property
-    def muted_role(self):
-        if self._muted_role is None:
-            self._muted_role = self.tortoise_guild.get_role(constants.muted_role_id)
-        return self._muted_role
 
     @property
     def verified_role(self):
@@ -119,8 +143,16 @@ class Moderation(commands.Cog):
         await interaction.response.defer()
 
         try:
+            view = discord.ui.View()
+            view.add_item(
+                discord.ui.Button(
+                    label="Appeal Kick",
+                    emoji=discord.PartialEmoji(name="appeal", id=1520010775845142548),
+                    url=constants.appeal_server_link,
+                )
+            )
             dm_embed = infraction_embed(interaction, member, constants.Infraction.kick, reason, True, False)
-            await member.send(embed=dm_embed)
+            await member.send(embed=dm_embed, view=view)
         except discord.Forbidden:
             pass
 
@@ -138,7 +170,7 @@ class Moderation(commands.Cog):
         return await interaction.followup.send(embed=success(f"{member.name} successfully kicked."))
 
 
-    # @app_commands.command()
+    # @app_commands.command(enabled=False)
     # @app_commands.checks.bot_has_permissions(administrator=True)
     # @app_commands.checks.has_permissions(administrator=True)
     # @app_commands.checks.cooldown(1, 120)
@@ -309,7 +341,7 @@ class Moderation(commands.Cog):
         if send_dm:
             embed = infraction_embed(interaction, user, constants.Infraction.ban, reason, True, permanent)
             try:
-                await user.send(embed=embed)
+                await user.send(embed=embed, view=appeal_view if not permanent else None)
             except discord.Forbidden:
                 pass
             except discord.HTTPException:
@@ -517,6 +549,13 @@ class Moderation(commands.Cog):
     async def dm_members(self, interaction: discord.Interaction, role: discord.Role):
         """Opens a modal to DM all members of a role"""
         await interaction.response.send_modal(DMModal(role, interaction))
+
+    @app_commands.command(name="dm_member")
+    @app_commands.checks.cooldown(1, 900)
+    @app_commands.checks.has_permissions(administrator=True)
+    async def dm_member(self, interaction: discord.Interaction, member: discord.Member):
+        """Opens a modal to DM a member"""
+        await interaction.response.send_modal(DMModal(member, interaction))
 
 
     @app_commands.command(name="send")

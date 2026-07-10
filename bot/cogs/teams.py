@@ -4,7 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 
 from bot.constants import (
-    accepting_team_invites_role_id, system_log_channel_id, success_emoji,
+    accepting_team_invites_role_id, team_log_channel_id, success_emoji,
     teams_dashboard_message_id, join_a_team_channel_id, moderator_role_id
 )
 from bot.utils.embed_handler import success, failure, warning, info, authored_sm
@@ -456,7 +456,7 @@ class TeamCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.log_channel = self.bot.get_channel(system_log_channel_id)
+        self.log_channel = self.bot.get_channel(team_log_channel_id)
         self.bot.add_view(PersistentJoinRequestView(self))
 
     @commands.Cog.listener()

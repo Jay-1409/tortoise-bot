@@ -10,7 +10,7 @@ class Database:
 
     async def connect(self):
         if not self.pool:
-            self.pool = await asyncpg.create_pool(self.dsn)
+            self.pool = await asyncpg.create_pool(self.dsn, min_size = 1, max_size = 5)
 
     async def close(self):
         if self.pool:
@@ -454,6 +454,7 @@ class RetentionManager:
                 date DATE NOT NULL,
                 joins INTEGER NOT NULL DEFAULT 0,
                 leaves INTEGER NOT NULL DEFAULT 0,
+                total_messages INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (guild_id, date)
             )
         """)
@@ -476,28 +477,41 @@ class RetentionManager:
 
     async def get_today(self, guild_id: int):
         row = await self.db.pool.fetchrow("""
-            SELECT joins, leaves
+            SELECT joins, leaves, total_messages
             FROM daily_retention
             WHERE guild_id=$1 AND date=CURRENT_DATE
         """, guild_id)
 
         if not row:
-            return 0, 0
+            return 0, 0, 0
 
-        return row["joins"], row["leaves"]
+        return row["joins"], row["leaves"], row["total_messages"]
 
     async def get_yesterday(self, guild_id: int):
         row = await self.db.pool.fetchrow("""
-            SELECT joins, leaves
+            SELECT joins, leaves, total_messages
             FROM daily_retention
             WHERE guild_id = $1
             AND date = (NOW() AT TIME ZONE 'UTC')::DATE - INTERVAL '1 day'
         """, guild_id)
 
         if not row:
-            return 0, 0
+            return 0, 0, 0
 
-        return row["joins"], row["leaves"]
+        return row["joins"], row["leaves"], row["total_messages"]
+
+    async def get_day_before_yesterday(self, guild_id: int):
+        row = await self.db.pool.fetchrow("""
+            SELECT joins, leaves, total_messages
+            FROM daily_retention
+            WHERE guild_id = $1
+            AND date = (NOW() AT TIME ZONE 'UTC')::DATE - INTERVAL '2 day'
+        """, guild_id)
+
+        if not row:
+            return 0, 0, 0
+
+        return row["joins"], row["leaves"], row["total_messages"]
 
 
 class TeamManager:
