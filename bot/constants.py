@@ -247,7 +247,7 @@ challenge_pipeline_smoke_tests = {
     },
     "java": {
         "name": "Java",
-        "solution": "static int add(int a, int b) {\n    return a + b;\n}\n",
+        "solution": "public static int add(int a, int b) {\n    return a + b;\n}\n",
         "boilerplate": (
             "public class Main {\n"
             "    {{SOLUTION}}\n"

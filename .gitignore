@@ -117,3 +117,4 @@ poetry.lock
 config/
 
 .DS_Store
+*.excalidraw
