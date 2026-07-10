@@ -53,7 +53,7 @@ challenges_channel_id = 1522906649973751898
 bait_channel_id = 1520372693294125167
 introduction_channel_id = 1520372692090359897
 join_a_team_channel_id = 1520372692446871665
-
+challenge_logs_public_channel_id = 1524679248219213864
 # Ban Appeal Channels
 ban_appeal_channel_id = 1520372693155971106
 
