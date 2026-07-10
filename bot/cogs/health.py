@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 
 import time
 import platform
@@ -46,6 +47,7 @@ class HealthCheck(commands.Cog):
         self.runner: web.AppRunner | None = None
         self.site: web.TCPSite | None = None
 
+    async def cog_load(self):
         self.bot.loop.create_task(self._start_server())
 
     def _is_rate_limited(self, request: web.Request) -> bool:
@@ -175,6 +177,6 @@ class HealthCheck(commands.Cog):
 
 async def setup(bot: commands.Bot):
     host = config("HOST", default="0.0.0.0")
-    port = config("PORT", default="8080")
+    port = config("PORT", default=8080, cast=int)
 
     await bot.add_cog(HealthCheck(bot, host=host, port=port))
