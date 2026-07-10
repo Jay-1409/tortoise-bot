@@ -234,16 +234,6 @@ challenge_moderator_role_ids = (
     admin_role_id,
     jr_moderator_role_id,
 )
-challenge_moderator_role_names = (
-    "moderator",
-    "moderators",
-    "mod",
-    "mods",
-    "admin",
-    "admins",
-    "staff",
-)
-challenge_moderator_role_name_contains = "moderator"
 challenge_default_points = 100
 challenge_test_reveal_cost = 50
 challenge_default_max_tests = 30

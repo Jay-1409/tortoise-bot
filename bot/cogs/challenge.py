@@ -2,7 +2,6 @@ import io
 import json
 import logging
 import os
-import re
 import time
 from typing import Any, Optional
 
@@ -20,21 +19,19 @@ from bot.constants import (
     challenge_logs_channel_id,
     challenge_logs_channel_name,
     challenge_modal_submission_max_length,
-    challenge_moderator_role_name_contains,
-    challenge_moderator_role_names,
     challenge_moderator_role_ids,
     challenge_pipeline_smoke_test_cases,
     challenge_pipeline_smoke_tests,
     challenge_problem_title_max_length,
     challenge_problem_title_min_length,
     challenge_statement_max_bytes,
-    challenge_submission_max_bytes,
     challenge_supported_languages,
     challenge_test_reveal_cost,
     challenge_tests_max_bytes,
     challenge_autocomplete_choice_max_length,
     system_log_channel_id,
 )
+from bot.utils.checks import check_if_tortoise_staff
 from bot.utils.challenge import (
     ExecutionApiClient,
     Problem,
@@ -73,66 +70,11 @@ async def challenge_problem_autocomplete(
     return await cog.autocomplete_problem(interaction, current)
 
 
-async def check_if_challenge_moderator(interaction: discord.Interaction) -> bool:
-    if interaction.guild is None:
-        return False
-
-    if interaction.guild.owner_id == interaction.user.id:
-        return True
-
-    interaction_permissions = getattr(interaction, "permissions", None)
-    if interaction_permissions and has_challenge_moderator_permissions(interaction_permissions):
-        return True
-
-    member = interaction.user if isinstance(interaction.user, discord.Member) else None
-    if member is None:
-        member = interaction.guild.get_member(interaction.user.id)
-    if member is None:
-        try:
-            member = await interaction.guild.fetch_member(interaction.user.id)
-        except discord.HTTPException:
-            return False
-
-    if has_challenge_moderator_permissions(member.guild_permissions):
-        return True
-
-    if any(is_moderator_role_name(role.name) for role in member.roles):
-        return True
-
-    return any(role.id in challenge_moderator_role_ids for role in member.roles)
-
-
-def has_challenge_moderator_permissions(permissions: discord.Permissions) -> bool:
-    return (
-        permissions.administrator
-        or permissions.manage_guild
-        or permissions.manage_messages
-        or permissions.moderate_members
-        or permissions.kick_members
-        or permissions.ban_members
-    )
-
-
-def is_moderator_role_name(name: str) -> bool:
-    normalized = re.sub(r"[^a-z0-9]+", "", name.lower())
-    return (
-        normalized in challenge_moderator_role_names
-        or challenge_moderator_role_name_contains in normalized
-    )
-
-
 def is_challenge_moderator_member(member: discord.Member) -> bool:
     if member.guild.owner_id == member.id:
         return True
 
-    if has_challenge_moderator_permissions(member.guild_permissions):
-        return True
-
-    for role in member.roles:
-        if role.id in challenge_moderator_role_ids or is_moderator_role_name(role.name):
-            return True
-
-    return False
+    return any(role.id in challenge_moderator_role_ids for role in member.roles)
 
 
 class SolutionSubmissionModal(discord.ui.Modal):
@@ -215,46 +157,6 @@ class RevealTestsConfirmView(discord.ui.View):
     async def cancel(self, interaction: discord.Interaction, _: discord.ui.Button):
         self.disable_all_buttons()
         await interaction.response.edit_message(embed=warning("Test case reveal cancelled."), view=self)
-
-
-async def get_member_debug(interaction: discord.Interaction) -> str:
-    if interaction.guild is None:
-        return "Guild: none"
-
-    user_type = type(interaction.user).__name__
-    member = interaction.user if isinstance(interaction.user, discord.Member) else None
-    cache_hit = member is not None
-    fetch_status = "not needed"
-
-    if member is None:
-        member = interaction.guild.get_member(interaction.user.id)
-        cache_hit = member is not None
-
-    if member is None:
-        try:
-            member = await interaction.guild.fetch_member(interaction.user.id)
-            fetch_status = "ok"
-        except discord.HTTPException as exc:
-            fetch_status = f"failed HTTP {getattr(exc, 'status', '?')}"
-
-    roles = []
-    guild_permissions = "unknown"
-    if member is not None:
-        roles = [role.name for role in member.roles if role.name != "@everyone"]
-        guild_permissions = str(member.guild_permissions.value)
-
-    interaction_permissions = getattr(interaction, "permissions", None)
-    interaction_permissions_value = interaction_permissions.value if interaction_permissions else "none"
-
-    return (
-        f"Guild ID: `{interaction.guild.id}`"
-        f"\nUser object: `{user_type}`"
-        f"\nMember cache hit: `{cache_hit}`"
-        f"\nFetch member: `{fetch_status}`"
-        f"\nInteraction permissions: `{interaction_permissions_value}`"
-        f"\nGuild permissions: `{guild_permissions}`"
-        f"\nRoles I can see for you: {', '.join(roles[:10]) or 'none'}"
-    )
 
 
 class Challenge(commands.Cog):
@@ -370,6 +272,7 @@ class Challenge(commands.Cog):
         await interaction.response.send_message(embed=self.build_rules_embed(self.bot.user))
 
     @challenge_group.command(name="add-points", description="Give points to a user.")
+    @app_commands.check(check_if_tortoise_staff)
     @app_commands.describe(
         member="Member receiving points.",
         amount="Number of points to add.",
@@ -385,13 +288,6 @@ class Challenge(commands.Cog):
         silent: bool = False,
     ):
         await interaction.response.defer(ephemeral=True)
-
-        if not await check_if_challenge_moderator(interaction):
-            await interaction.followup.send(
-                embed=failure("You need a moderator/admin/staff role or moderation permissions to add points."),
-                ephemeral=True,
-            )
-            return
 
         new_total = await self.bot.points_manager.add_points(interaction.guild.id, member.id, amount)
         desc = (
@@ -422,6 +318,7 @@ class Challenge(commands.Cog):
         )
 
     @challenge_group.command(name="remove-points", description="Remove points from a user.")
+    @app_commands.check(check_if_tortoise_staff)
     @app_commands.describe(
         member="Member losing points.",
         amount="Number of points to remove.",
@@ -435,13 +332,6 @@ class Challenge(commands.Cog):
         silent: bool = True,
     ):
         await interaction.response.defer(ephemeral=True)
-
-        if not await check_if_challenge_moderator(interaction):
-            await interaction.followup.send(
-                embed=failure("You need a moderator/admin/staff role or moderation permissions to remove points."),
-                ephemeral=True,
-            )
-            return
 
         new_total = await self.bot.points_manager.remove_points(interaction.guild.id, member.id, amount)
         await self.send_points_log(
@@ -521,6 +411,7 @@ class Challenge(commands.Cog):
         )
 
     @challenge_group.command(name="add", description="Create or update a coding problem.")
+    @app_commands.check(check_if_tortoise_staff)
     @app_commands.describe(
         title="Problem title.",
         statement="Markdown/text file containing the full problem statement.",
@@ -544,21 +435,6 @@ class Challenge(commands.Cog):
         expected_outputs: discord.Attachment,
     ):
         await interaction.response.defer(ephemeral=True)
-
-        if not await check_if_challenge_moderator(interaction):
-            debug = await get_member_debug(interaction)
-            role_hint = (
-                f"\n\nYour user ID: `{interaction.user.id}`"
-                f"\n{debug}"
-            )
-            await interaction.followup.send(
-                embed=failure(
-                    "You need a moderator/admin/staff role, Manage Server, or moderation permissions "
-                    f"to add problems.{role_hint}"
-                ),
-                ephemeral=True,
-            )
-            return
 
         try:
             problem_statement = await download_text(statement, max_bytes=challenge_statement_max_bytes)
@@ -603,17 +479,11 @@ class Challenge(commands.Cog):
         )
 
     @challenge_group.command(name="remove", description="Deactivate a coding problem.")
+    @app_commands.check(check_if_tortoise_staff)
     @app_commands.autocomplete(problem=challenge_problem_autocomplete)
     @app_commands.describe(problem="Problem title.")
     async def challenge_remove(self, interaction: discord.Interaction, problem: str):
         await interaction.response.defer(ephemeral=True)
-
-        if not await check_if_challenge_moderator(interaction):
-            await interaction.followup.send(
-                embed=failure("You need a moderator/admin/staff role or moderation permissions to remove problems."),
-                ephemeral=True,
-            )
-            return
 
         removed = await self.deactivate_problem(interaction.guild_id, clean_slug(problem))
         if not removed:
@@ -738,6 +608,7 @@ class Challenge(commands.Cog):
         name="test-pipeline",
         description="Run a mod-only smoke test of the challenge submission pipeline.",
     )
+    @app_commands.check(check_if_tortoise_staff)
     @app_commands.choices(language=PIPELINE_LANGUAGE_CHOICES)
     @app_commands.describe(language="Language to test. Leave blank or choose All languages for full coverage.")
     async def challenge_test_pipeline(
@@ -746,16 +617,6 @@ class Challenge(commands.Cog):
         language: Optional[app_commands.Choice[str]] = None,
     ):
         await interaction.response.defer(ephemeral=True)
-
-        if not await check_if_challenge_moderator(interaction):
-            await interaction.followup.send(
-                embed=failure(
-                    "You need a moderator/admin/staff role, Manage Server, or moderation permissions "
-                    "to test the challenge pipeline."
-                ),
-                ephemeral=True,
-            )
-            return
 
         tests = [
             TestCase(name=name, input=test_input, expected=expected)
