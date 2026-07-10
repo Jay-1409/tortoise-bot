@@ -1,11 +1,11 @@
 import io
 import json
 import logging
-import os
 import time
 from typing import Any, Optional
 
 import discord
+from decouple import config
 from discord import app_commands
 from discord.ext import commands
 
@@ -29,7 +29,7 @@ from bot.constants import (
     challenge_test_reveal_cost,
     challenge_tests_max_bytes,
     challenge_autocomplete_choice_max_length,
-    system_log_channel_id,
+    challenge_log_channel_id,
 )
 from bot.utils.checks import check_if_tortoise_staff
 from bot.utils.challenge import (
@@ -171,8 +171,8 @@ class Challenge(commands.Cog):
         self.bot = bot
         self.max_tests = challenge_default_max_tests
         self.hermes = ExecutionApiClient(
-            url=os.getenv("EXECUTION_API_URL", challenge_execution_api_default_url),
-            api_token=os.getenv("EXECUTION_API_KEY") or None,
+            url=config("EXECUTION_API_URL", default=challenge_execution_api_default_url),
+            api_token=config("EXECUTION_API_KEY", default=None),
             timeout_seconds=positive_integer_env(
                 "EXECUTION_API_TIMEOUT_MS",
                 challenge_execution_api_default_timeout_ms,
@@ -258,9 +258,9 @@ class Challenge(commands.Cog):
         )
 
     async def send_points_log(self, embed: discord.Embed):
-        channel = self.bot.get_channel(system_log_channel_id)
+        channel = self.bot.get_channel(challenge_log_channel_id)
         if channel is None:
-            logger.warning("Points log channel not found: %s", system_log_channel_id)
+            logger.warning("Points log channel not found: %s", challenge_log_channel_id)
             return
         try:
             await channel.send(embed=embed)
