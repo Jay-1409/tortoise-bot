@@ -30,11 +30,8 @@ DEVELOPMENT_MODE = config("DEVELOPMENT_MODE", cast=bool, default=False)
 
 class Bot(commands.Bot):
     # If not empty then only these will be loaded. Good for local debugging. If empty all found are loaded.
-    allowed_extensions = (
-        "challenge",
-        "leaderboard",
-    )
-    banned_extensions = (
+    allowed_extensions = {}
+    banned_extensions = {
         "advent_of_code",
         "documentation",
         "help",
@@ -44,7 +41,7 @@ class Bot(commands.Bot):
         "utility",
         "health",
         "spam_filter"
-    )
+    }
     build_version = "mystery-build"
     advanced_protection: bool = True
 
@@ -84,6 +81,9 @@ class Bot(commands.Bot):
         self.giveaway_manager = None
         self.duty_manager = None
         self._sys_log_channel = None
+
+        if DEVELOPMENT_MODE:
+            self.banned_extensions.remove("health")
 
     @property
     def sys_log_channel(self) -> discord.TextChannel:
