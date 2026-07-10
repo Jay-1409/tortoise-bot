@@ -16,7 +16,8 @@ from decouple import config
 from bot.api_client import TortoiseAPI
 from bot.constants import bot_log_channel_id, github_repo_link
 from bot.manager import (
-    Database, ProgressionManager, AFKManager, PointsManager, RetentionManager, TeamManager, GiveawayManager, DutyManager
+    Database, ProgressionManager, AFKManager, PointsManager, ChallengeManager,
+    RetentionManager, TeamManager, GiveawayManager, DutyManager
 )
 from bot.utils.embed_handler import simple_embed
 from bot.utils.error_handler import TortoiseCommandTree
@@ -29,7 +30,10 @@ DEVELOPMENT_MODE = config("DEVELOPMENT_MODE", cast=bool, default=False)
 
 class Bot(commands.Bot):
     # If not empty then only these will be loaded. Good for local debugging. If empty all found are loaded.
-    allowed_extensions = ()
+    allowed_extensions = (
+        "challenge",
+        "leaderboard",
+    )
     banned_extensions = (
         "advent_of_code",
         "documentation",
@@ -73,6 +77,7 @@ class Bot(commands.Bot):
         self.db = None
         self.progression_manager = None
         self.points_manager = None
+        self.challenge_manager = None
         self.afk_manager = None
         self.retention_manager = None
         self.team_manager = None
@@ -170,6 +175,7 @@ class Bot(commands.Bot):
             self.progression_manager = ProgressionManager(self.db)
             self.afk_manager = AFKManager(self.db)
             self.points_manager = PointsManager(self.db)
+            self.challenge_manager = ChallengeManager(self.db)
             self.retention_manager = RetentionManager(self.db)
             self.team_manager = TeamManager(self.db)
             self.giveaway_manager = GiveawayManager(self.db)
@@ -178,6 +184,7 @@ class Bot(commands.Bot):
             await self.progression_manager.setup()
             await self.afk_manager.setup()
             await self.points_manager.setup()
+            await self.challenge_manager.setup()
             await self.retention_manager.setup()
             await self.team_manager.setup()
             await self.giveaway_manager.setup()
