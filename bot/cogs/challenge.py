@@ -39,7 +39,6 @@ from bot.utils.challenge import (
     clean_slug,
     download_text,
     judge_submission,
-    parse_jsonish,
     parse_test_files,
     positive_integer_env,
     slug_from_title,
@@ -169,6 +168,7 @@ class Challenge(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.challenge_manager = bot.challenge_manager
         self.max_tests = challenge_default_max_tests
         self.hermes = ExecutionApiClient(
             url=config("EXECUTION_API_URL", default=challenge_execution_api_default_url),
@@ -177,62 +177,6 @@ class Challenge(commands.Cog):
                 "EXECUTION_API_TIMEOUT_MS",
                 challenge_execution_api_default_timeout_ms,
             ) / 1000,
-        )
-
-    async def cog_load(self):
-        await self.setup_tables()
-
-    async def setup_tables(self):
-        await self.bot.db.pool.execute(
-            """
-            CREATE TABLE IF NOT EXISTS challenge_problems (
-                guild_id BIGINT NOT NULL,
-                slug TEXT NOT NULL,
-                title TEXT NOT NULL,
-                statement TEXT NOT NULL DEFAULT '',
-                points INTEGER NOT NULL CHECK(points > 0),
-                boilerplates JSONB NOT NULL,
-                tests JSONB NOT NULL,
-                created_by BIGINT NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                active BOOLEAN NOT NULL DEFAULT TRUE,
-                PRIMARY KEY (guild_id, slug)
-            )
-            """
-        )
-        await self.bot.db.pool.execute(
-            """
-            CREATE TABLE IF NOT EXISTS challenge_submissions (
-                id BIGSERIAL PRIMARY KEY,
-                guild_id BIGINT NOT NULL,
-                problem_slug TEXT NOT NULL,
-                user_id BIGINT NOT NULL,
-                language TEXT NOT NULL,
-                status TEXT NOT NULL,
-                passed_tests INTEGER NOT NULL DEFAULT 0,
-                total_tests INTEGER NOT NULL DEFAULT 0,
-                error_message TEXT,
-                submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )
-            """
-        )
-        await self.bot.db.pool.execute(
-            """
-            CREATE TABLE IF NOT EXISTS challenge_solves (
-                guild_id BIGINT NOT NULL,
-                problem_slug TEXT NOT NULL,
-                user_id BIGINT NOT NULL,
-                points INTEGER NOT NULL,
-                solved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (guild_id, problem_slug, user_id)
-            )
-            """
-        )
-        await self.bot.db.pool.execute(
-            """
-            CREATE INDEX IF NOT EXISTS challenge_solves_leaderboard
-            ON challenge_solves(guild_id, user_id)
-            """
         )
 
     @staticmethod
@@ -456,7 +400,7 @@ class Challenge(commands.Cog):
             tests = parse_test_files(inputs_text, outputs_text, self.max_tests)
 
             slug = slug_from_title(str(title))
-            await self.upsert_problem(
+            await self.challenge_manager.upsert_problem(
                 guild_id=interaction.guild_id,
                 slug=slug,
                 title=str(title),
@@ -485,7 +429,7 @@ class Challenge(commands.Cog):
     async def challenge_remove(self, interaction: discord.Interaction, problem: str):
         await interaction.response.defer(ephemeral=True)
 
-        removed = await self.deactivate_problem(interaction.guild_id, clean_slug(problem))
+        removed = await self.challenge_manager.deactivate_problem(interaction.guild_id, clean_slug(problem))
         if not removed:
             await interaction.followup.send(embed=failure("Problem not found."), ephemeral=True)
             return
@@ -525,7 +469,7 @@ class Challenge(commands.Cog):
         language: Optional[app_commands.Choice[str]] = None,
     ):
         if problem is None:
-            rows = await self.list_problems(interaction.guild_id)
+            rows = await self.challenge_manager.list_problems(interaction.guild_id)
             if not rows:
                 await interaction.response.send_message(embed=warning("No active problems yet."), ephemeral=True)
                 return
@@ -544,7 +488,7 @@ class Challenge(commands.Cog):
             )
             return
 
-        selected = await self.get_problem(interaction.guild_id, clean_slug(problem))
+        selected = await self.challenge_manager.get_problem(interaction.guild_id, clean_slug(problem))
         if selected is None:
             await interaction.response.send_message(embed=failure("Problem not found."), ephemeral=True)
             return
@@ -688,12 +632,12 @@ class Challenge(commands.Cog):
     @app_commands.autocomplete(problem=challenge_problem_autocomplete)
     @app_commands.describe(problem="Problem title.")
     async def challenge_reveal_tests(self, interaction: discord.Interaction, problem: str):
-        selected = await self.get_problem(interaction.guild_id, clean_slug(problem))
+        selected = await self.challenge_manager.get_problem(interaction.guild_id, clean_slug(problem))
         if selected is None:
             await interaction.response.send_message(embed=failure("Problem not found."), ephemeral=True)
             return
 
-        already_revealed = await self.has_revealed_tests(
+        already_revealed = await self.challenge_manager.has_revealed_tests(
             guild_id=interaction.guild_id,
             slug=selected.slug,
             user_id=interaction.user.id,
@@ -723,7 +667,7 @@ class Challenge(commands.Cog):
         language_name: str,
         submitted_code: str,
     ):
-        selected = await self.get_problem(interaction.guild_id, problem_slug)
+        selected = await self.challenge_manager.get_problem(interaction.guild_id, problem_slug)
         if selected is None:
             await interaction.followup.send(embed=failure("Problem not found."), ephemeral=True)
             return
@@ -760,7 +704,7 @@ class Challenge(commands.Cog):
                 result.diagnostic,
             )
 
-        await self.record_submission(
+        await self.challenge_manager.record_submission(
             guild_id=interaction.guild_id,
             slug=selected.slug,
             user_id=interaction.user.id,
@@ -781,8 +725,8 @@ class Challenge(commands.Cog):
             )
             return
 
-        previous_rank = await self.get_points_rank(interaction.guild_id, interaction.user.id)
-        newly_solved = await self.award_solve(
+        previous_rank = await self.challenge_manager.get_points_rank(interaction.guild_id, interaction.user.id)
+        newly_solved = await self.challenge_manager.award_solve(
             guild_id=interaction.guild_id,
             slug=selected.slug,
             user_id=interaction.user.id,
@@ -795,7 +739,7 @@ class Challenge(commands.Cog):
                 interaction.user.id,
                 selected.points,
             )
-            current_rank = await self.get_points_rank(interaction.guild_id, interaction.user.id)
+            current_rank = await self.challenge_manager.get_points_rank(interaction.guild_id, interaction.user.id)
             await self.log_accepted_submission(
                 interaction=interaction,
                 problem=selected,
@@ -821,7 +765,7 @@ class Challenge(commands.Cog):
                 interaction.guild_id,
                 interaction.user.id,
             )
-            current_rank = await self.get_points_rank(interaction.guild_id, interaction.user.id)
+            current_rank = await self.challenge_manager.get_points_rank(interaction.guild_id, interaction.user.id)
             await self.log_accepted_submission(
                 interaction=interaction,
                 problem=selected,
@@ -852,7 +796,7 @@ class Challenge(commands.Cog):
             return []
 
         query = current.lower()
-        rows = await self.list_problems(interaction.guild_id)
+        rows = await self.challenge_manager.list_problems(interaction.guild_id)
         choices = []
         seen = set()
 
@@ -867,160 +811,6 @@ class Challenge(commands.Cog):
                 break
 
         return choices
-
-    async def upsert_problem(
-        self,
-        *,
-        guild_id: int,
-        slug: str,
-        title: str,
-        statement: str,
-        boilerplates: dict[str, str],
-        tests: list[TestCase],
-        created_by: int,
-    ):
-        await self.bot.db.pool.execute(
-            """
-            INSERT INTO challenge_problems
-                (guild_id, slug, title, statement, points, boilerplates, tests, created_by)
-            VALUES ($1, $2, $3, $4, $8, $5::jsonb, $6::jsonb, $7)
-            ON CONFLICT (guild_id, slug)
-            DO UPDATE SET
-                title = EXCLUDED.title,
-                statement = EXCLUDED.statement,
-                points = EXCLUDED.points,
-                boilerplates = EXCLUDED.boilerplates,
-                tests = EXCLUDED.tests,
-                created_by = EXCLUDED.created_by,
-                created_at = NOW(),
-                active = TRUE
-            """,
-            guild_id,
-            slug,
-            title,
-            statement,
-            json.dumps(boilerplates),
-            json.dumps([
-                {"name": test.name, "input": test.input, "expected": test.expected}
-                for test in tests
-            ]),
-            created_by,
-            challenge_default_points,
-        )
-
-    async def get_problem(self, guild_id: int, slug: str) -> Optional[Problem]:
-        row = await self.bot.db.pool.fetchrow(
-            """
-            SELECT guild_id, slug, title, statement, points, boilerplates, tests
-            FROM challenge_problems
-            WHERE guild_id = $1 AND slug = $2 AND active = TRUE
-            """,
-            guild_id,
-            slug,
-        )
-        if row is None:
-            return None
-
-        tests_payload = parse_jsonish(row["tests"])
-        return Problem(
-            guild_id=row["guild_id"],
-            slug=row["slug"],
-            title=row["title"],
-            statement=row["statement"],
-            points=row["points"],
-            boilerplates=dict(parse_jsonish(row["boilerplates"])),
-            tests=[
-                TestCase(name=test["name"], input=test["input"], expected=test["expected"])
-                for test in tests_payload
-            ],
-        )
-
-    async def list_problems(self, guild_id: int) -> list[Any]:
-        return await self.bot.db.pool.fetch(
-            """
-            SELECT slug, title, points
-            FROM challenge_problems
-            WHERE guild_id = $1 AND active = TRUE
-            ORDER BY created_at DESC
-            LIMIT 25
-            """,
-            guild_id,
-        )
-
-    async def deactivate_problem(self, guild_id: int, slug: str) -> bool:
-        result = await self.bot.db.pool.execute(
-            """
-            UPDATE challenge_problems
-            SET active = FALSE
-            WHERE guild_id = $1
-              AND slug = $2
-              AND active = TRUE
-            """,
-            guild_id,
-            slug,
-        )
-        return result == "UPDATE 1"
-
-    async def record_submission(
-        self,
-        *,
-        guild_id: int,
-        slug: str,
-        user_id: int,
-        language: str,
-        status: str,
-        passed: int,
-        total: int,
-        error: Optional[str],
-    ):
-        await self.bot.db.pool.execute(
-            """
-            INSERT INTO challenge_submissions
-                (guild_id, problem_slug, user_id, language, status, passed_tests, total_tests, error_message)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            """,
-            guild_id,
-            slug,
-            user_id,
-            language,
-            status,
-            passed,
-            total,
-            error,
-        )
-
-    async def award_solve(self, *, guild_id: int, slug: str, user_id: int, points: int) -> bool:
-        result = await self.bot.db.pool.execute(
-            """
-            INSERT INTO challenge_solves (guild_id, problem_slug, user_id, points)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (guild_id, problem_slug, user_id) DO NOTHING
-            """,
-            guild_id,
-            slug,
-            user_id,
-            points,
-        )
-        return result == "INSERT 0 1"
-
-    async def get_points_rank(self, guild_id: int, user_id: int) -> Optional[int]:
-        return await self.bot.db.pool.fetchval(
-            """
-            WITH ranked AS (
-                SELECT
-                    user_id,
-                    RANK() OVER (ORDER BY points DESC) AS rank
-                FROM points
-                WHERE guild_id = $1
-                  AND points > 0
-            )
-            SELECT rank
-            FROM ranked
-            WHERE user_id = $2
-            """,
-            guild_id,
-            user_id,
-        )
 
     async def log_accepted_submission(
         self,
@@ -1083,42 +873,8 @@ class Challenge(commands.Cog):
                 problem.slug,
             )
 
-    async def has_revealed_tests(self, *, guild_id: int, slug: str, user_id: int) -> bool:
-        return bool(
-            await self.bot.db.pool.fetchval(
-                """
-                SELECT 1
-                FROM challenge_submissions
-                WHERE guild_id = $1
-                  AND problem_slug = $2
-                  AND user_id = $3
-                  AND status = 'tests_revealed'
-                """,
-                guild_id,
-                slug,
-                user_id,
-            )
-        )
-
-    async def mark_tests_revealed(self, *, guild_id: int, slug: str, user_id: int) -> bool:
-        if await self.has_revealed_tests(guild_id=guild_id, slug=slug, user_id=user_id):
-            return False
-
-        await self.bot.db.pool.execute(
-            """
-            INSERT INTO challenge_submissions
-                (guild_id, problem_slug, user_id, language, status, passed_tests, total_tests, error_message)
-            VALUES ($1, $2, $3, 'reveal', 'tests_revealed', 0, 0, $4)
-            """,
-            guild_id,
-            slug,
-            user_id,
-            f"Deducted {challenge_test_reveal_cost} points for revealing test cases",
-        )
-        return True
-
     async def reveal_tests_for_user(self, interaction: discord.Interaction, problem: Problem):
-        should_deduct = await self.mark_tests_revealed(
+        should_deduct = await self.challenge_manager.mark_tests_revealed(
             guild_id=interaction.guild_id,
             slug=problem.slug,
             user_id=interaction.user.id,

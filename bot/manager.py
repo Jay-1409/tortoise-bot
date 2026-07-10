@@ -1,6 +1,11 @@
 from __future__ import annotations
 from datetime import datetime, timezone
+import json
+from typing import Any, Optional
 import asyncpg
+
+from bot.constants import challenge_default_points, challenge_test_reveal_cost
+from bot.utils.challenge import Problem, TestCase, parse_jsonish
 
 class Database:
 
@@ -441,6 +446,252 @@ class PointsManager:
             limit,
         )
         return [(r["user_id"], r["points"]) for r in rows]
+
+
+class ChallengeManager:
+    def __init__(self, db: Database):
+        self.db = db
+
+    async def setup(self):
+        await self.db.pool.execute(
+            """
+            CREATE TABLE IF NOT EXISTS challenge_problems (
+                guild_id BIGINT NOT NULL,
+                slug TEXT NOT NULL,
+                title TEXT NOT NULL,
+                statement TEXT NOT NULL DEFAULT '',
+                points INTEGER NOT NULL CHECK(points > 0),
+                boilerplates JSONB NOT NULL,
+                tests JSONB NOT NULL,
+                created_by BIGINT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                active BOOLEAN NOT NULL DEFAULT TRUE,
+                PRIMARY KEY (guild_id, slug)
+            )
+            """
+        )
+        await self.db.pool.execute(
+            """
+            CREATE TABLE IF NOT EXISTS challenge_submissions (
+                id BIGSERIAL PRIMARY KEY,
+                guild_id BIGINT NOT NULL,
+                problem_slug TEXT NOT NULL,
+                user_id BIGINT NOT NULL,
+                language TEXT NOT NULL,
+                status TEXT NOT NULL,
+                passed_tests INTEGER NOT NULL DEFAULT 0,
+                total_tests INTEGER NOT NULL DEFAULT 0,
+                error_message TEXT,
+                submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+        await self.db.pool.execute(
+            """
+            CREATE TABLE IF NOT EXISTS challenge_solves (
+                guild_id BIGINT NOT NULL,
+                problem_slug TEXT NOT NULL,
+                user_id BIGINT NOT NULL,
+                points INTEGER NOT NULL,
+                solved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (guild_id, problem_slug, user_id)
+            )
+            """
+        )
+        await self.db.pool.execute(
+            """
+            CREATE INDEX IF NOT EXISTS challenge_solves_leaderboard
+            ON challenge_solves(guild_id, user_id)
+            """
+        )
+
+    async def upsert_problem(
+        self,
+        *,
+        guild_id: int,
+        slug: str,
+        title: str,
+        statement: str,
+        boilerplates: dict[str, str],
+        tests: list[TestCase],
+        created_by: int,
+    ):
+        await self.db.pool.execute(
+            """
+            INSERT INTO challenge_problems
+                (guild_id, slug, title, statement, points, boilerplates, tests, created_by)
+            VALUES ($1, $2, $3, $4, $8, $5::jsonb, $6::jsonb, $7)
+            ON CONFLICT (guild_id, slug)
+            DO UPDATE SET
+                title = EXCLUDED.title,
+                statement = EXCLUDED.statement,
+                points = EXCLUDED.points,
+                boilerplates = EXCLUDED.boilerplates,
+                tests = EXCLUDED.tests,
+                created_by = EXCLUDED.created_by,
+                created_at = NOW(),
+                active = TRUE
+            """,
+            guild_id,
+            slug,
+            title,
+            statement,
+            json.dumps(boilerplates),
+            json.dumps([
+                {"name": test.name, "input": test.input, "expected": test.expected}
+                for test in tests
+            ]),
+            created_by,
+            challenge_default_points,
+        )
+
+    async def get_problem(self, guild_id: int, slug: str) -> Optional[Problem]:
+        row = await self.db.pool.fetchrow(
+            """
+            SELECT guild_id, slug, title, statement, points, boilerplates, tests
+            FROM challenge_problems
+            WHERE guild_id = $1 AND slug = $2 AND active = TRUE
+            """,
+            guild_id,
+            slug,
+        )
+        if row is None:
+            return None
+
+        tests_payload = parse_jsonish(row["tests"])
+        return Problem(
+            guild_id=row["guild_id"],
+            slug=row["slug"],
+            title=row["title"],
+            statement=row["statement"],
+            points=row["points"],
+            boilerplates=dict(parse_jsonish(row["boilerplates"])),
+            tests=[
+                TestCase(name=test["name"], input=test["input"], expected=test["expected"])
+                for test in tests_payload
+            ],
+        )
+
+    async def list_problems(self, guild_id: int) -> list[Any]:
+        return await self.db.pool.fetch(
+            """
+            SELECT slug, title, points
+            FROM challenge_problems
+            WHERE guild_id = $1 AND active = TRUE
+            ORDER BY created_at DESC
+            LIMIT 25
+            """,
+            guild_id,
+        )
+
+    async def deactivate_problem(self, guild_id: int, slug: str) -> bool:
+        result = await self.db.pool.execute(
+            """
+            UPDATE challenge_problems
+            SET active = FALSE
+            WHERE guild_id = $1
+              AND slug = $2
+              AND active = TRUE
+            """,
+            guild_id,
+            slug,
+        )
+        return result == "UPDATE 1"
+
+    async def record_submission(
+        self,
+        *,
+        guild_id: int,
+        slug: str,
+        user_id: int,
+        language: str,
+        status: str,
+        passed: int,
+        total: int,
+        error: Optional[str],
+    ):
+        await self.db.pool.execute(
+            """
+            INSERT INTO challenge_submissions
+                (guild_id, problem_slug, user_id, language, status, passed_tests, total_tests, error_message)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            """,
+            guild_id,
+            slug,
+            user_id,
+            language,
+            status,
+            passed,
+            total,
+            error,
+        )
+
+    async def award_solve(self, *, guild_id: int, slug: str, user_id: int, points: int) -> bool:
+        result = await self.db.pool.execute(
+            """
+            INSERT INTO challenge_solves (guild_id, problem_slug, user_id, points)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (guild_id, problem_slug, user_id) DO NOTHING
+            """,
+            guild_id,
+            slug,
+            user_id,
+            points,
+        )
+        return result == "INSERT 0 1"
+
+    async def get_points_rank(self, guild_id: int, user_id: int) -> Optional[int]:
+        return await self.db.pool.fetchval(
+            """
+            WITH ranked AS (
+                SELECT
+                    user_id,
+                    RANK() OVER (ORDER BY points DESC) AS rank
+                FROM points
+                WHERE guild_id = $1
+                  AND points > 0
+            )
+            SELECT rank
+            FROM ranked
+            WHERE user_id = $2
+            """,
+            guild_id,
+            user_id,
+        )
+
+    async def has_revealed_tests(self, *, guild_id: int, slug: str, user_id: int) -> bool:
+        return bool(
+            await self.db.pool.fetchval(
+                """
+                SELECT 1
+                FROM challenge_submissions
+                WHERE guild_id = $1
+                  AND problem_slug = $2
+                  AND user_id = $3
+                  AND status = 'tests_revealed'
+                """,
+                guild_id,
+                slug,
+                user_id,
+            )
+        )
+
+    async def mark_tests_revealed(self, *, guild_id: int, slug: str, user_id: int) -> bool:
+        if await self.has_revealed_tests(guild_id=guild_id, slug=slug, user_id=user_id):
+            return False
+
+        await self.db.pool.execute(
+            """
+            INSERT INTO challenge_submissions
+                (guild_id, problem_slug, user_id, language, status, passed_tests, total_tests, error_message)
+            VALUES ($1, $2, $3, 'reveal', 'tests_revealed', 0, 0, $4)
+            """,
+            guild_id,
+            slug,
+            user_id,
+            f"Deducted {challenge_test_reveal_cost} points for revealing test cases",
+        )
+        return True
 
 
 class RetentionManager:
@@ -919,4 +1170,3 @@ class DutyManager:
 
     async def get_all_schedules(self):
         return await self.db.pool.fetch("SELECT * FROM duty_schedules")
-
