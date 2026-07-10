@@ -2,7 +2,7 @@ import io
 import json
 import logging
 import time
-from typing import Any, Optional
+from typing import Optional
 
 import discord
 from decouple import config
@@ -11,15 +11,12 @@ from discord.ext import commands
 
 from bot.constants import (
     challenge_boilerplate_max_bytes,
-    challenge_discussion_channel_id,
     challenge_default_max_tests,
     challenge_default_points,
     challenge_execution_api_default_timeout_ms,
     challenge_execution_api_default_url,
-    challenge_logs_channel_id,
-    challenge_logs_channel_name,
+    challenge_log_channel_id,
     challenge_modal_submission_max_length,
-    challenge_moderator_role_ids,
     challenge_pipeline_smoke_test_cases,
     challenge_pipeline_smoke_tests,
     challenge_problem_title_max_length,
@@ -30,6 +27,8 @@ from bot.constants import (
     challenge_tests_max_bytes,
     challenge_autocomplete_choice_max_length,
     challenge_log_channel_id,
+    success_emoji,
+    failure_emoji, challenge_logs_public_channel_id,
 )
 from bot.utils.checks import check_if_tortoise_staff
 from bot.utils.challenge import (
@@ -43,7 +42,7 @@ from bot.utils.challenge import (
     positive_integer_env,
     slug_from_title,
 )
-from bot.utils.embed_handler import failure, info, success, warning
+from bot.utils.embed_handler import failure, info, success, warning, build_rules_embed
 
 
 logger = logging.getLogger(__name__)
@@ -67,13 +66,6 @@ async def challenge_problem_autocomplete(
     if cog is None:
         return []
     return await cog.autocomplete_problem(interaction, current)
-
-
-def is_challenge_moderator_member(member: discord.Member) -> bool:
-    if member.guild.owner_id == member.id:
-        return True
-
-    return any(role.id in challenge_moderator_role_ids for role in member.roles)
 
 
 class SolutionSubmissionModal(discord.ui.Modal):
@@ -178,42 +170,24 @@ class Challenge(commands.Cog):
                 challenge_execution_api_default_timeout_ms,
             ) / 1000,
         )
+        self._challenge_log_channel = None
+        self._challenge_log_public_channel = None
 
-    @staticmethod
-    def build_rules_embed(user: Any):
-        return info(
-            (
-                "Participants who submit a valid working solution will be awarded points "
-                "and featured on the leaderboard.\n\n"
-                "**Guidelines:**\n"
-                "- Start with a brute force approach if needed, then optimize for time and space complexity.\n"
-                "- Do not use AI assistance.\n"
-                f"- Discussions are allowed in <#{challenge_discussion_channel_id}>, but do not share full solutions.\n"
-                "- Any programming language is allowed.\n\n"
-                "**Complexity Target:**\n"
-                "- Aim for O(N) time and O(N) space or the best achievable complexity.\n"
-                f"- All valid submissions receive {challenge_default_points} points.\n\n"
-                "**Submission Rules:**\n"
-                f"- Use `/challenge submit` to submit your solution.\n"
-                f"- Challenge discussion belongs in <#{challenge_discussion_channel_id}>."
-            ),
-            user,
-            "Challenge Guidelines",
-        )
+    @property
+    def challenge_log_channel(self) -> discord.TextChannel:
+        if self._challenge_log_channel is None:
+            self._challenge_log_channel = self.bot.get_channel(challenge_log_channel_id)
+        return self._challenge_log_channel
 
-    async def send_points_log(self, embed: discord.Embed):
-        channel = self.bot.get_channel(challenge_log_channel_id)
-        if channel is None:
-            logger.warning("Points log channel not found: %s", challenge_log_channel_id)
-            return
-        try:
-            await channel.send(embed=embed)
-        except discord.HTTPException:
-            logger.exception("Failed to send challenge points log")
+    @property
+    def challenge_log_public_channel(self) -> discord.TextChannel:
+        if self._challenge_log_public_channel is None:
+            self._challenge_log_public_channel = self.bot.get_channel(challenge_logs_public_channel_id)
+        return self._challenge_log_public_channel
 
     @challenge_group.command(name="rules", description="Show challenge guidelines.")
     async def challenge_rules(self, interaction: discord.Interaction):
-        await interaction.response.send_message(embed=self.build_rules_embed(self.bot.user))
+        await interaction.response.send_message(embed=build_rules_embed(self.bot.user))
 
     @challenge_group.command(name="add-points", description="Give points to a user.")
     @app_commands.check(check_if_tortoise_staff)
@@ -246,8 +220,8 @@ class Challenge(commands.Cog):
             desc += f"\n\n**Reason:** {reason}"
             dm_desc += f"\n\n**Comment:** {reason}"
 
-        await self.send_points_log(
-            info(desc, self.bot.user, "Points Awarded", f"Given by {interaction.user.display_name}")
+        await self.challenge_log_channel.send(
+            embed=info(desc, self.bot.user, "Points Awarded", f"Given by {interaction.user.display_name}")
         )
 
         if not silent:
@@ -278,8 +252,9 @@ class Challenge(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         new_total = await self.bot.points_manager.remove_points(interaction.guild.id, member.id, amount)
-        await self.send_points_log(
-            info(
+
+        await self.challenge_log_channel.send(
+            embed=info(
                 (
                     f"**{amount}** points removed from {member.mention}\n"
                     f"New total: **{new_total}** points."
@@ -319,6 +294,7 @@ class Challenge(commands.Cog):
             min_points=1,
             limit=10,
         )
+
         if not entries:
             await interaction.followup.send(embed=warning("No one has any points yet."), ephemeral=True)
             return
@@ -436,25 +412,6 @@ class Challenge(commands.Cog):
 
         await interaction.followup.send(embed=success(f"Removed problem `{problem}`."), ephemeral=True)
 
-    @commands.command(name="sync")
-    @commands.guild_only()
-    async def sync_prefix(self, ctx: commands.Context):
-        if not isinstance(ctx.author, discord.Member) or not is_challenge_moderator_member(ctx.author):
-            await ctx.reply(
-                embed=failure("You need a moderator/admin/staff role or moderation permissions to sync commands."),
-                mention_author=False,
-            )
-            return
-
-        synced = await self.bot.tree.sync()
-        command_names = ", ".join(f"`/{command.name}`" for command in synced) or "none"
-        await ctx.reply(
-            embed=success(
-                f"Globally synced **{len(synced)}** application command(s): {command_names}"
-            ),
-            mention_author=False,
-        )
-
     @challenge_group.command(name="view", description="List problems or download a selected problem starter.")
     @app_commands.autocomplete(problem=challenge_problem_autocomplete)
     @app_commands.choices(language=LANGUAGE_CHOICES)
@@ -496,7 +453,7 @@ class Challenge(commands.Cog):
         boilerplate = selected.boilerplates.get(language.value)
         if boilerplate is None:
             await interaction.response.send_message(
-                embed=failure(f"No {language.name} boilerplate is configured for this problem."),
+                embed=failure(f"No `{language.name}` boilerplate is configured for this problem."),
                 ephemeral=True,
             )
             return
@@ -593,7 +550,7 @@ class Challenge(commands.Cog):
         diagnostics = []
 
         for _, sample, result, elapsed_ms in results:
-            icon = "✅" if result.accepted else "❌"
+            icon = success_emoji if result.accepted else failure_emoji
             status = "passed" if result.accepted else f"failed on {result.failed_test}: {result.error}"
             status_lines.append(
                 f"{icon} **{sample['name']}** — {status} "
@@ -831,13 +788,6 @@ class Challenge(commands.Cog):
         if guild is None:
             return
 
-        channel = discord.utils.get(guild.text_channels, name=challenge_logs_channel_name)
-        if channel is None:
-            channel = guild.get_channel(challenge_logs_channel_id) or self.bot.get_channel(challenge_logs_channel_id)
-        if channel is None:
-            logger.warning("Challenge log channel not found for guild=%s", interaction.guild_id)
-            return
-
         previous_rank_text = f"#{previous_rank}" if previous_rank is not None else "unranked"
         current_rank_text = f"#{current_rank}" if current_rank is not None else "unranked"
         if previous_rank != current_rank:
@@ -846,8 +796,9 @@ class Challenge(commands.Cog):
             leaderboard_change = f"unchanged ({current_rank_text})"
 
         embed = discord.Embed(
-            title="✅ Correct submission",
+            title="",
             description=(
+                f"## {success_emoji} Correct Submission\n\n"
                 f"{interaction.user.mention} solved **{problem.title}**."
                 if newly_solved
                 else f"{interaction.user.mention} submitted another accepted solution for **{problem.title}**."
@@ -862,16 +813,8 @@ class Challenge(commands.Cog):
         embed.add_field(name="Total points", value=str(total_points), inline=True)
         embed.add_field(name="Leaderboard", value=leaderboard_change, inline=True)
 
-        try:
-            await channel.send(content=interaction.user.mention, embed=embed)
-        except discord.HTTPException:
-            logger.exception(
-                "Failed to send challenge accepted log guild=%s channel=%s user=%s slug=%s",
-                interaction.guild_id,
-                getattr(channel, "id", None),
-                interaction.user.id,
-                problem.slug,
-            )
+        await self.challenge_log_public_channel.send(content=interaction.user.mention, embed=embed)
+
 
     async def reveal_tests_for_user(self, interaction: discord.Interaction, problem: Problem):
         should_deduct = await self.challenge_manager.mark_tests_revealed(

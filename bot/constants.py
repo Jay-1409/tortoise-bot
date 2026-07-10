@@ -52,8 +52,7 @@ resources_channel_id = 577195878620725251
 challenge_submission_channel_id = 780842875901575228
 challenge_discussion_channel_id = 781129674860003336
 challenges_channel_id = 780841435712716800
-challenge_logs_channel_id = challenge_submission_channel_id
-challenge_logs_channel_name = "challenge-logs"
+challenge_logs_public_channel_id = 1524682332005728257
 bait_channel_id = 1461666781612740750
 introduction_channel_id = 1487413734056923236
 join_a_team_channel_id = 1489264049983197246
@@ -195,11 +194,6 @@ challenge_supported_languages = (
 )
 challenge_supported_language_values = tuple(
     language_value for _, language_value in challenge_supported_languages
-)
-challenge_moderator_role_ids = (
-    moderator_role_id,
-    admin_role_id,
-    jr_moderator_role_id,
 )
 challenge_default_points = 100
 challenge_test_reveal_cost = 50

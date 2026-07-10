@@ -317,3 +317,25 @@ def code_eval_embed(language: str, output: str, *, edited: bool = False, exit_co
         embed.add_field(name="Language", value=f"```ex\n{language.capitalize()}```", inline=True)
         embed.add_field(name="Exit code", value=f"```ex\n{exit_code}```", inline=True)
     return embed
+
+
+def build_rules_embed(user: discord.ClientUser):
+    return info(
+        (
+            "Participants who submit a valid working solution will be awarded points "
+            "and featured on the leaderboard.\n\n"
+            "**Guidelines:**\n"
+            "- Start with a brute force approach if needed, then optimize for time and space complexity.\n"
+            "- Do not use AI assistance.\n"
+            f"- Discussions are allowed in <#{constants.challenge_discussion_channel_id}>, but do not share full solutions.\n"
+            "- Any programming language is allowed.\n\n"
+            "**Complexity Target:**\n"
+            "- Aim for O(N) time and O(N) space or the best achievable complexity.\n"
+            f"- All valid submissions receive {constants.challenge_default_points} points.\n\n"
+            "**Submission Rules:**\n"
+            f"- Use `/challenge submit` to submit your solution.\n"
+            f"- Challenge discussion belongs in <#{constants.challenge_discussion_channel_id}>."
+        ),
+        user,
+        "Challenge Guidelines",
+    )
