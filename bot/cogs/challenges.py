@@ -474,7 +474,9 @@ class Challenges(commands.Cog):
         )
         embed.add_field(name="Points", value=str(selected.points), inline=True)
         embed.add_field(name="Language", value=language.name, inline=True)
-        embed.set_footer(text="Download the starter file, implement the requested function, then use /challenge submit.")
+        embed.set_footer(
+            text="Download the starter file, implement the requested function, then use /challenge submit."
+        )
         await interaction.response.send_message(
             embed=embed,
             files=[statement_file, starter_file],
@@ -671,10 +673,16 @@ class Challenges(commands.Cog):
         )
 
         if not result.accepted:
+            diagnostic = ""
+            if result.diagnostic:
+                safe_diagnostic = result.diagnostic[:1500].replace("```", "''' ")
+                diagnostic = f"\n\n**Compiler/runtime diagnostic:**\n```text\n{safe_diagnostic}\n```"
+
             await interaction.followup.send(
                 embed=failure(
                     f"{result.error} on **{result.failed_test}** "
                     f"({result.passed}/{result.total} passed)."
+                    f"{diagnostic}"
                 ),
                 ephemeral=True,
             )
@@ -761,7 +769,12 @@ class Challenges(commands.Cog):
             if row["slug"] in seen:
                 continue
             seen.add(row["slug"])
-            choices.append(app_commands.Choice(name=row["title"][:challenge_autocomplete_choice_max_length], value=row["slug"]))
+            choices.append(
+                app_commands.Choice(
+                    name=row["title"][:challenge_autocomplete_choice_max_length],
+                    value=row["slug"],
+                )
+            )
             if len(choices) >= 25:
                 break
 
@@ -860,6 +873,7 @@ class Challenges(commands.Cog):
             )
 
         await interaction.followup.send(embed=success(message), file=file, ephemeral=True)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Challenges(bot))
