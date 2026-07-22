@@ -62,7 +62,7 @@ class Bot(commands.Bot):
         self.tortoise_meta_cache = {
             "event_submission": False,
             "mod_mail": True,
-            "bug_report": False,
+            "bug_report": True,
             "staff_application": False,
         }
         self.suppressed_deletes = set()

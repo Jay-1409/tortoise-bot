@@ -3,7 +3,7 @@ from aenum import Enum, NoAlias
 from discord import Color
 
 tortoise_guild_id = 1520372691448889364
-ban_appeal_server_id = 1520372691448889364
+ban_appeal_server_id = 1523653436757770330
 website_url = "https://www.tyxc.org/"
 privacy_url = "https://www.tyxc.org/privacy"
 rules_url = "https://www.tyxc.org/rules"
@@ -173,9 +173,9 @@ automatically_assigned_roles = {
 
 
 # Emoji IDs
-mod_mail_emoji_id = 706195614857297970
+mod_mail_emoji_id = 1529488959665733662
 event_emoji_id = 611403448750964746
-bug_emoji_id = 723274927968354364
+bug_emoji_id = 1529489689222840673
 verified_emoji_id = 610713784268357632
 upvote_emoji_id = 741202481090002994
 staff_application_emoji_id = 1485325243043283075
