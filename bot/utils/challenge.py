@@ -183,7 +183,9 @@ def build_executable(language: str, solution: str, test_input: str) -> str:
             f"const __judgeInput = Buffer.from('{encoded}', 'base64');\n"
             "const __judgeRead = __judgeFs.readFileSync;\n"
             "__judgeFs.readFileSync = function(path, options) {\n"
-            "  if (path === 0 || path === '/dev/stdin') return options && String(options).includes('utf') ? __judgeInput.toString('utf8') : __judgeInput;\n"
+            "  if (path === 0 || path === '/dev/stdin') "
+            "return options && String(options).includes('utf') "
+            "? __judgeInput.toString('utf8') : __judgeInput;\n"
             "  return __judgeRead.apply(this, arguments);\n"
             "};\n"
             f"{solution}"
@@ -201,9 +203,13 @@ def build_executable(language: str, solution: str, test_input: str) -> str:
             "int main() {\n"
             "  std::string __data;\n"
             f'  const std::string __b64 = "{encoded}";\n'
-            '  const std::string __chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";\n'
+            '  const std::string __chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            'abcdefghijklmnopqrstuvwxyz0123456789+/";\n'
             "  int __val=0, __bits=-8;\n"
-            "  for (unsigned char __c : __b64) { if (__c=='=') break; auto __p=__chars.find(__c); if (__p==std::string::npos) continue; __val=(__val<<6)+int(__p); __bits+=6; if (__bits>=0) { __data.push_back(char((__val>>__bits)&0xFF)); __bits-=8; } }\n"
+            "  for (unsigned char __c : __b64) { if (__c=='=') break; "
+            "auto __p=__chars.find(__c); if (__p==std::string::npos) continue; "
+            "__val=(__val<<6)+int(__p); __bits+=6; if (__bits>=0) { "
+            "__data.push_back(char((__val>>__bits)&0xFF)); __bits-=8; } }\n"
             "  std::istringstream __input(__data); std::cin.rdbuf(__input.rdbuf());\n"
             "  return __submitted_main();\n"
             "}"
@@ -217,7 +223,7 @@ def build_executable(language: str, solution: str, test_input: str) -> str:
             "import java.io.*;\n"
             "import java.util.Base64;\n"
             f"{renamed}\n"
-            "class Main { public static void main(String[] args) throws Exception { "
+            "public class Main { public static void main(String[] args) throws Exception { "
             f'System.setIn(new ByteArrayInputStream(Base64.getDecoder().decode("{encoded}"))); '
             "SubmittedMain.main(args); } }"
         )
@@ -284,7 +290,10 @@ async def judge_submission(
                     passed=passed,
                     total=len(tests),
                     failed_test=test.name,
-                    error="Judge sandbox is unavailable on this host architecture. This is an engine failure, not a wrong answer.",
+                    error=(
+                        "Judge sandbox is unavailable on this host architecture. "
+                        "This is an engine failure, not a wrong answer."
+                    ),
                     diagnostic=execution.stderr[:2000],
                 )
 

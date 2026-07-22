@@ -4,7 +4,7 @@ repos:
     -   id: flake8
         name: Flake8
         description: Lints this repository using flake8.
-        entry: pipenv run lint
-        language: python
+        entry: .venv/bin/python -m flake8
+        language: system
         types: [python]
         require_serial: true
