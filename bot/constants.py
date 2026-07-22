@@ -455,5 +455,7 @@ Fun fact (optional):
 ```
 """
 
-if config("DEVELOPMENT_MODE", cast=bool, default=False):
+DEVELOPMENT_MODE = config("DEVELOPMENT_MODE", cast=bool, default=False)
+
+if DEVELOPMENT_MODE:
     from dev.constants import * #noqa

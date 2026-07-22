@@ -30,7 +30,6 @@ class AdventOfCode(commands.Cog):
         # Ensure bot is ready before the loop starts
         await self.bot.wait_until_ready()
 
-
     @app_commands.command(
         name="aoc_invite",
         description="Shows invite code to the Tortoise Advent of Code leaderboard."
@@ -150,8 +149,6 @@ class AdventOfCode(commands.Cog):
             member=guild.me,
         )
         await interaction.response.send_message(embed=embed)
-
-
 
 
 async def setup(bot):

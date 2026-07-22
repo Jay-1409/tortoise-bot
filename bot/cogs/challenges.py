@@ -100,6 +100,7 @@ class SolutionSubmissionModal(discord.ui.Modal):
             submitted_code=str(self.solution.value),
         )
 
+
 class RevealTestsConfirmView(discord.ui.View):
     def __init__(self, *, cog: "Challenges", user_id: int, problem: Problem):
         super().__init__(timeout=120)
@@ -825,7 +826,6 @@ class Challenges(commands.Cog):
         embed.add_field(name="Leaderboard", value=leaderboard_change, inline=True)
 
         await self.challenge_log_public_channel.send(content=interaction.user.mention, embed=embed)
-
 
     async def reveal_tests_for_user(self, interaction: discord.Interaction, problem: Problem):
         should_deduct = await self.challenge_manager.mark_tests_revealed(

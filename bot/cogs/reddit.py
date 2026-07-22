@@ -89,11 +89,9 @@ class Reddit(commands.Cog):
         """Initialize Reddit client with error handling."""
         client_id = config("PRAW_CLIENT_ID")
         client_secret = config("PRAW_CLIENT_SECRET")
-        
         if not client_id or not client_secret:
             logger.warning("Reddit API credentials not found. Reddit commands will be disabled.")
             return
-        
         try:
             self.reddit = asyncpraw.Reddit(
                 client_id=client_id,

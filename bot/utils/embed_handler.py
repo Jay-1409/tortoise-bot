@@ -62,6 +62,7 @@ def goodbye(member: discord.Member, message: str = None) -> Embed:
     embed.set_footer(text=f"ID: {member.id}", icon_url=get_user_avatar(member))
     return embed
 
+
 async def nsfw_warning_embed(author: Member, additional_msg: str = "") -> Embed:
     """
     Constructs a warning embed if a nsfw post is invoked.
@@ -284,6 +285,7 @@ def project_embed(projects: dict, me):
 
     return embed
 
+
 def moderation_log_embed(
     *,
     title: str,
@@ -296,7 +298,9 @@ def moderation_log_embed(
     embed.add_field(name="Content", value=content[:1024], inline=False)
     return embed
 
-def code_eval_embed(language: str, output: str, *, edited: bool = False, exit_code: int = -1, disable_extras=False) -> Embed:
+
+def code_eval_embed(language: str, output: str, *,
+                    edited: bool = False, exit_code: int = -1, disable_extras=False) -> Embed:
     title = "Execution Result (edited)" if edited else "Execution Result"
     color = (Color.dark_red() if exit_code != 0 else Color.green() if edited else Color.dark_green())
 
@@ -327,7 +331,8 @@ def build_rules_embed(user: discord.ClientUser):
             "**Guidelines:**\n"
             "- Start with a brute force approach if needed, then optimize for time and space complexity.\n"
             "- Do not use AI assistance.\n"
-            f"- Discussions are allowed in <#{constants.challenge_discussion_channel_id}>, but do not share full solutions.\n"
+            f"- Discussions are allowed in <#{constants.challenge_discussion_channel_id}>, "
+            f"but do not share full solutions.\n"
             "- Any programming language is allowed.\n\n"
             "**Complexity Target:**\n"
             "- Aim for O(N) time and O(N) space or the best achievable complexity.\n"

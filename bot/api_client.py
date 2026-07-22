@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 from datetime import datetime, timezone
@@ -112,7 +111,6 @@ class TortoiseAPI(BaseAPIClient):
             "Content-Type": "application/json"
         }
         super().__init__("https://api.tyxc.org/private/", headers=auth_header)
-
 
     async def get_all_rules(self) -> List[dict]:
         # Return is list of dicts in format  ('number', 'name', alias', 'statement'):
