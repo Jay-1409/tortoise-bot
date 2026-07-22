@@ -25,7 +25,6 @@ class JoinManager(commands.Cog):
         self.ban_appeal_channel = None
         self.user_log_channel = None
 
-
     def get_unbanned_embed(self):
         return embed_handler.info(
             "You are not currently banned from Tortoise Community, "
@@ -35,7 +34,6 @@ class JoinManager(commands.Cog):
             "Unban Notice!",
             "Welcome back to our server!"
         )
-
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -118,13 +116,13 @@ class JoinManager(commands.Cog):
                 delete_after=5,
             )
 
-
     @staticmethod
     def get_post_intro_message() -> str:
         messages = [
             f"Nice introduction! Now head over to <#{constants.general_channel_id}> and start chatting with everyone.",
             f"Great intro! Jump into <#{constants.general_channel_id}> and join the ongoing conversations.",
-            f"Thanks for introducing yourself! Feel free to continue the conversation in <#{constants.general_channel_id}>.",
+            f"Thanks for introducing yourself! "
+            f"Feel free to continue the conversation in <#{constants.general_channel_id}>.",
             f"Welcome! Now you can head to <#{constants.general_channel_id}> and start connecting with others.",
             f"Nice to meet you! Go ahead and say hi in <#{constants.general_channel_id}> to meet more people.",
             f"Good intro. Continue chatting and get involved in <#{constants.general_channel_id}>.",
@@ -198,7 +196,9 @@ class JoinManager(commands.Cog):
 
         # Instantly ban any bots joining when bot protection is enabled.
         if member.bot and self.bot.advanced_protection:
-            await self.log_channel.send(embed=embed_handler.warning(f"{member.mention} bot was banned due to Bot Protection™"))
+            await self.log_channel.send(
+                embed=embed_handler.warning(f"{member.mention} bot was banned due to Bot Protection™")
+            )
             await member.ban(reason="Bot Protection™ enabled. All bot joins are prohibited.")
             return
 
@@ -237,8 +237,7 @@ class JoinManager(commands.Cog):
                     f"Please introduce yourself here.\n\n"
                     f"📌Suggested Format (copy-paste)\n"
                     + constants.introduction_format
-                    + "> **Recommended**: Helps like-minded members find you easily."
-            ,
+                    + "> **Recommended**: Helps like-minded members find you easily.",
             delete_after=60,
         )
 
@@ -260,7 +259,6 @@ class JoinManager(commands.Cog):
         )
 
         await self.user_log_channel.send(embed=embed_handler.goodbye(member, msg))
-
 
     @tasks.loop(time=dtime(hour=0, minute=0, tzinfo=timezone.utc))
     async def daily_retention_report(self):

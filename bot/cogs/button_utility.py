@@ -97,7 +97,10 @@ class TicketReasonSelect(discord.ui.Select):
                                                                           guild_id=tortoise_guild_id,
                                                                           status=False)
 
-                    await interaction.followup.send(f"✅ Successfully unbanned. You may rejoin!\n\n{server_link}", ephemeral=True)
+                    await interaction.followup.send(
+                        f"✅ Successfully unbanned. You may rejoin!\n\n{server_link}",
+                        ephemeral=True
+                    )
 
                 except discord.NotFound:
                     await interaction.followup.send("You are not currently recorded on the server ban list.",
@@ -108,7 +111,8 @@ class TicketReasonSelect(discord.ui.Select):
             else:
                 await interaction.followup.send(
                     embed=failure(
-                        "Our records indicate you weren't banned by the automated bot trap.\nPlease select a different appeal reason."),
+                        "Our records indicate you weren't banned by the automated bot trap."
+                        "\nPlease select a different appeal reason."),
                     ephemeral=True
                 )
 
@@ -363,7 +367,8 @@ class ButtonUtility(commands.Cog):
             title="Receive Team Invites",
             description=(
                 "Click here to receive team invites from team leads.\n\n"
-                "Teams are designed for focused DSA preparation with like-minded people, preferably in the same timezone.\n"
+                "Teams are designed for focused DSA preparation with like-minded people, "
+                "preferably in the same timezone.\n"
                 "This may include organized group calls, discussions, and collaboration.\n\n"
                 f"**All Teams: **: https://discord.com/channels/"
                 f"{tortoise_guild_id}/{join_a_team_channel_id}/{teams_dashboard_message_id}\n\n"
@@ -377,6 +382,7 @@ class ButtonUtility(commands.Cog):
             embed=embed,
             view=TeamInvitesButton(),
         )
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ButtonUtility(bot))

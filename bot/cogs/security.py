@@ -29,6 +29,7 @@ appeal_view.add_item(
     )
 )
 
+
 class PDFViewerButtonView(discord.ui.View):
 
     def __init__(self, bot: commands.Bot, original_msg_id: int):
@@ -264,7 +265,6 @@ class Security(commands.Cog):
 
         await self.message_log_channel.send(embed=embed, files=files_to_log)
 
-
     async def deal_with_attachments(self, message: Message) -> bool:
         """
         Will delete message if it has attachment that we don't allow.
@@ -273,37 +273,36 @@ class Security(commands.Cog):
         """
         await self.process_pdf_attachments(message)
 
-        async with aiohttp.ClientSession() as session:
-            for attachment in message.attachments:
-                try:
-                    extension = attachment.filename.rsplit('.', 1)[1].lower()
-                except IndexError:
-                    extension = ""
+        for attachment in message.attachments:
+            try:
+                extension = attachment.filename.rsplit('.', 1)[1].lower()
+            except IndexError:
+                extension = ""
 
-                if extension not in allowed_file_extensions:
+            if extension not in allowed_file_extensions:
 
-                    reply = (
-                        "This file type is not permitted.\n"
-                        "Use **Markdown** for code snippets and **Gist** or **Pastebin** for large files.\n"
-                        "For formatting help, use **/markdown**."
-                    )
+                reply = (
+                    "This file type is not permitted.\n"
+                    "Use **Markdown** for code snippets and **Gist** or **Pastebin** for large files.\n"
+                    "For formatting help, use **/markdown**."
+                )
 
-                    msg = await message.channel.send(
-                        f"{message.author.mention}",
-                        embed=info(message=reply, title="File Blocked", member=message.guild.me)
-                    )
+                msg = await message.channel.send(
+                    f"{message.author.mention}",
+                    embed=info(message=reply, title="File Blocked", member=message.guild.me)
+                )
 
-                    self.bot.loop.create_task(
-                        RemovableMessage.create_instance(self.bot, msg, message.author)
-                    )
+                self.bot.loop.create_task(
+                    RemovableMessage.create_instance(self.bot, msg, message.author)
+                )
 
-                    await self.archive_and_delete_message(
-                        message,
-                        reason="Blocked file upload",
-                        title="File Blocked",
-                        delete=True
-                    )
-                    return True
+                await self.archive_and_delete_message(
+                    message,
+                    reason="Blocked file upload",
+                    title="File Blocked",
+                    delete=True
+                )
+                return True
 
         return False
 
@@ -334,7 +333,6 @@ class Security(commands.Cog):
             if not await self.check_if_invite_is_our_guild(execution.content, self.guild):
                 await self.take_action_ban(member, "Discord advertisement")
 
-
     async def take_action_ban(self, member, reason, content=None):
         fake_interaction = FakeInteraction(self.bot, self.bot.user)
         embed = infraction_embed(
@@ -361,7 +359,7 @@ class Security(commands.Cog):
         )
         log_embed.set_footer(text="⚠️ This was an automated action.")
         await self.mod_log_channel.send(embed=log_embed)
-        await member.ban(reason=f"AutoMod racial and homophobic slur rule triggered")
+        await member.ban(reason="AutoMod racial and homophobic slur rule triggered")
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -379,7 +377,6 @@ class Security(commands.Cog):
             title="Message Deleted",
             delete=False
         )
-
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: list[discord.Message]):
@@ -448,7 +445,6 @@ class Security(commands.Cog):
             else:
                 await self.message_log_channel.send(embed=embed)
 
-
     @staticmethod
     def extract_content(message: discord.Message) -> str:
         parts = []
@@ -500,7 +496,7 @@ class Security(commands.Cog):
         """Temporarily disables Advanced Protection."""
         await interaction.response.defer()
         self.bot.advanced_protection = False
-        await interaction.followup.send(embed=warning(f"Bot Protection™ Disabled for 5 minutes."), ephemeral=False)
+        await interaction.followup.send(embed=warning("Bot Protection™ Disabled for 5 minutes."), ephemeral=False)
         self.bot.loop.create_task(self._enable_protection_after_delay())
 
     @app_commands.command()
@@ -510,7 +506,7 @@ class Security(commands.Cog):
         """Enable Advanced Protection."""
         await interaction.response.defer()
         self.bot.advanced_protection = True
-        await interaction.followup.send(embed=success(f"Bot Protection™ Enabled."), ephemeral=False)
+        await interaction.followup.send(embed=success("Bot Protection™ Enabled."), ephemeral=False)
 
 
 async def setup(bot):

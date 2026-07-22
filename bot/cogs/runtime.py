@@ -33,6 +33,7 @@ view.add_item(
     )
 )
 
+
 class SandboxExec(commands.Cog):
     runtime_group = app_commands.Group(
         name="runtime", description="Manage runtime functions", guild_ids=[tortoise_guild_id]
@@ -47,7 +48,6 @@ class SandboxExec(commands.Cog):
 
     def cog_unload(self):
         self.bot.loop.create_task(self.session.close())
-
 
     def _parse_block(self, content: str):
         if not content.startswith("/run"):
@@ -70,7 +70,6 @@ class SandboxExec(commands.Cog):
             return lang, code
         except Exception:
             return None
-
 
     async def _execute(self, language: str, code: str):
         payload = {
@@ -105,7 +104,6 @@ class SandboxExec(commands.Cog):
                 }
 
             return await resp.json()
-
 
     def _build_output(self, result: dict):
         exit_code = result.get("code")
@@ -176,7 +174,9 @@ class SandboxExec(commands.Cog):
 
         if not lang:
             await message.channel.send(
-               embed=failure("Unsupported language. Use `python`, `javascript`, `java` or `cpp` in the code block header.")
+               embed=failure(
+                   "Unsupported language. Use `python`, `javascript`, `java` or `cpp` in the code block header."
+               )
             )
             return
 

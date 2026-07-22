@@ -48,7 +48,6 @@ class TortoiseServer(commands.Cog):
             self._log_channel = self.bot.get_channel(constants.bot_log_channel_id)
         return self._log_channel
 
-
     async def _new_member_register_in_database(self, member: discord.Member):
         logger.info(f"New member {member} does not exist in database, adding now.")
         await self.bot.api_client.insert_new_member(member)
@@ -60,7 +59,6 @@ class TortoiseServer(commands.Cog):
             f"We hope you enjoy your stay!"
         )
         await member.send(embed=footer_embed(dm_msg, "Welcome"))
-
 
     @tasks.loop(hours=24)
     async def remove_new_member_role(self):
@@ -76,7 +74,6 @@ class TortoiseServer(commands.Cog):
                 except HTTPException:
                     logger.warning(f"Bot could't remove new member role from {member} {member.id}")
 
-
     @commands.command(enabled=False)
     @commands.check(check_if_it_is_tortoise_guild)
     async def deadline(self, ctx):
@@ -86,7 +83,6 @@ class TortoiseServer(commands.Cog):
             await ctx.send(embed=info(time_until_string, ctx.me, title="Code Jam ends in:"))
         except ValueError:
             await ctx.send(embed=info("Code Jam is over!", member=ctx.me, title="Finished"))
-
 
     @commands.command(enabled=False)
     @commands.check(check_if_it_is_tortoise_guild)

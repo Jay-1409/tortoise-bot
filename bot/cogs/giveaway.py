@@ -3,7 +3,7 @@ import asyncio
 import random
 import json
 from datetime import datetime, timedelta, timezone
-from typing import List, Dict, Any, Optional
+from typing import List, Dict
 
 import discord
 from discord.ext import commands
@@ -130,7 +130,7 @@ class Questionnaire(discord.ui.View):
                     await self.cog.bot.sys_log_channel.send(embed=info(
                        f"{interaction.user.mention} joined the giveaway.", self.cog.bot.user, ""
                     ))
-                except Exception as e:
+                except Exception:
                     pass
             msg = 'Entry successful! Good luck.' if success_joined else 'You have already entered this giveaway.'
             return await interaction.response.edit_message(embed=success(msg), view=None)
@@ -167,7 +167,7 @@ class JoinView(discord.ui.View):
                     await self.cog.bot.sys_log_channel.send(embed=info(
                        f"{interaction.user.mention} joined the giveaway.", self.cog.bot.user, ""
                     ))
-                except Exception as e:
+                except Exception:
                     pass
             embed = success("You joined the giveaway!") if joined else warning("You already joined this giveaway.")
             return await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -183,10 +183,12 @@ class JoinView(discord.ui.View):
         )
 
     def _normalize_questions(self, raw) -> list:
-        if not raw: return []
+        if not raw:
+            return []
         try:
             data = json.loads(raw) if isinstance(raw, str) else raw
-            if not isinstance(data, list): return []
+            if not isinstance(data, list):
+                return []
 
             normalized = []
             for item in data:
@@ -241,10 +243,12 @@ class Giveaway(commands.Cog):
 
         # Update the original message
         guild = self.bot.get_guild(row['guild_id'])
-        if not guild: return
+        if not guild:
+            return
 
         channel = guild.get_channel(row['channel_id'])
-        if not channel: return
+        if not channel:
+            return
 
         try:
             msg = await channel.fetch_message(message_id)

@@ -44,7 +44,7 @@ bot_dev_channel_id = 692851221223964822
 general_channel_id = 577192344533598472
 staff_channel_id = 580809054067097600
 
-#Tortoise Guild channels
+# Tortoise Guild channels
 leetcode_channel_id = 726403782740541470
 bot_cmd_channel_id = 581726653710073858
 project_showcase_channel_id = 581156991557304330
@@ -90,7 +90,7 @@ mod_mail_ping_role_id = 1493890424518086807
 bot_trap_role_id = 1505158956811685908
 
 promotable_roles = {
-    wizard_role_id: "You are currently **#1 on the Challenges Leaderboard**, placing you at the top "
+    wizard_role_id:      "You are currently **#1 on the Challenges Leaderboard**, placing you at the top "
                          "of the server's competitive coding ranks.\n\n"
                          "This is the **highest non-staff role** and represents exceptional skill, "
                          "consistency, and mastery in solving challenges.\n\n"
@@ -98,7 +98,8 @@ promotable_roles = {
 
     trusted_role_id:  "This role is given to members who have been part of the community for a long "
                          "time and have consistently shown they can be trusted.\n\n"
-                         "This is the **2nd highest non-staff role** and it's exempt from certain auto-mod restrictions.\n\n"
+                         "This is the **2nd highest non-staff role** and it's exempt "
+                      "from certain auto-mod restrictions.\n\n"
                          "Thank you for being a reliable and respected member of the community.",
 
     contributor_role_id:  "This role recognizes members who actively contribute to our **GitHub repositories** "
@@ -113,8 +114,8 @@ promotable_roles = {
                           "Do well during this period, make fair decisions, and help the community "
                           "and you can be promoted to **Moderator**.\n\n"
                           "Take initiative, be approachable, and set a good example.",
-    elite_role_id:        "This role is given to appreciate and honor the **most experienced person on this server**.\n\n"
-                          "This is now the **highest non-staff role** and stands as a testament to your exceptional "
+    elite_role_id:        "This role is given to appreciate and honor the **most experienced person on this server**.\n"
+                          "\nThis is now the **highest non-staff role** and stands as a testament to your exceptional "
                           "real-world expertise, seasoned perspective, and industry background.\n\n"
                           "We are incredibly grateful to have you in our community."
 
@@ -171,7 +172,8 @@ automatically_assigned_roles = {
         "🚨 EMERGENCY EVENT DETECTED 🚨\n"
         "You have unlocked the final hidden evolution: **Needs to Touch Grass**.\n"
         "The server database is begging you to close Discord. The turtles are worried.\n"
-        "Please step outside, locate a photosynthetic plant organism, and make physical skin contact with it immediately.\n\n"
+        "Please step outside, locate a photosynthetic plant organism, "
+        "and make physical skin contact with it immediately.\n\n"
         "Next milestone: **Seriously, go outside.**"
     )
 }
@@ -331,6 +333,7 @@ class Infraction(Enum):
     ban = Color.red()
     timeout = Color.orange()
 
+
 # These are allowed and will not get auto-deleted by bot nor will they get a paste link.
 allowed_file_extensions = (
     # Audio
@@ -443,19 +446,21 @@ RULES = {
     },
 }
 
+
 introduction_format = """
 ```
 Name / Nickname:
 Location:
 What you do:
-Interests: 
+Interests:
 Hobbies:
 What you’re looking for here:
 Fun fact (optional):
 ```
 """
 
+
 DEVELOPMENT_MODE = config("DEVELOPMENT_MODE", cast=bool, default=False)
 
 if DEVELOPMENT_MODE:
-    from dev.constants import * #noqa
+    from dev.constants import * # noqa
