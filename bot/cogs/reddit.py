@@ -1,10 +1,10 @@
-import os
 import random
 import datetime
 import logging
 from typing import List, AsyncGenerator
 
 import asyncpraw
+from decouple import config
 from discord.ext import commands
 from asyncpraw.models import Subreddit, Submission
 
@@ -87,8 +87,8 @@ class Reddit(commands.Cog):
 
     def _init_reddit(self):
         """Initialize Reddit client with error handling."""
-        client_id = os.getenv("PRAW_CLIENT_ID")
-        client_secret = os.getenv("PRAW_CLIENT_SECRET")
+        client_id = config("PRAW_CLIENT_ID")
+        client_secret = config("PRAW_CLIENT_SECRET")
         
         if not client_id or not client_secret:
             logger.warning("Reddit API credentials not found. Reddit commands will be disabled.")

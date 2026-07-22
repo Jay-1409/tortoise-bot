@@ -1,10 +1,8 @@
-import os
 import logging
 from sys import stdout
 
-from dotenv import load_dotenv
-
 from bot.bot import Bot
+from decouple import config
 from bot.non_blocking_file_handler import NonBlockingFileHandler
 
 
@@ -24,8 +22,7 @@ console_logger.addHandler(console)
 
 def main():
     console_logger.info("Loading and starting the bot..")
-    load_dotenv()
-    Bot().run(os.getenv("BOT_TOKEN"))
+    Bot().run(config("BOT_TOKEN"))
 
 if __name__ == "__main__":
     main()

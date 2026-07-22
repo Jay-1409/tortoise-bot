@@ -1,6 +1,6 @@
 from __future__ import annotations
-
 import os
+
 import time
 import platform
 from datetime import datetime, timedelta
@@ -8,8 +8,9 @@ from typing import Dict, List
 
 import psutil
 import discord
-from discord.ext import commands
 from aiohttp import web
+from decouple import config
+from discord.ext import commands
 from discord import app_commands
 from bot.constants import rate_limit_minutes
 
@@ -46,6 +47,7 @@ class HealthCheck(commands.Cog):
         self.runner: web.AppRunner | None = None
         self.site: web.TCPSite | None = None
 
+    async def cog_load(self):
         self.bot.loop.create_task(self._start_server())
 
     def _is_rate_limited(self, request: web.Request) -> bool:
@@ -158,7 +160,7 @@ class HealthCheck(commands.Cog):
 
         embed.add_field(
             name="Website",
-            value="[tortoise-bot.tortoisecommunity.org](https://tortoise-bot.tortoisecommunity.org)",
+            value="[tortoise-bot.tyxc.org](https://tortoise-bot.tyxc.org)",
             inline=False,
         )
 
@@ -174,7 +176,7 @@ class HealthCheck(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    host = os.getenv("HOST", "0.0.0.0")
-    port = os.getenv("PORT", "8080")
+    host = config("HOST", default="0.0.0.0")
+    port = config("PORT", default=8080, cast=int)
 
     await bot.add_cog(HealthCheck(bot, host=host, port=port))

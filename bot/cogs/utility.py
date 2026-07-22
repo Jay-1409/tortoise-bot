@@ -1,9 +1,8 @@
-import os
-
 import discord
 from async_cse import Search
 from discord.ext import commands
 
+from decouple import config
 from bot.api_client import StackAPI
 from bot.utils.paginator import ListPaginator
 from bot.constants import upvote_emoji_id, google_icon, stack_overflow_icon
@@ -14,7 +13,7 @@ class Utility(commands.Cog):
         self.bot = bot
         self.utility_embed_color = 0x3498d
         self.stack_api_client = StackAPI()
-        self.google_client = Search(os.getenv("GOOGLE_API_KEY"))
+        self.google_client = Search(config("GOOGLE_API_KEY"))
 
     @commands.command(aliases=["g"])
     async def google(self, ctx, *, query):

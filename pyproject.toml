@@ -12,7 +12,6 @@ packages = [{include = "bot"}]
 
 [tool.poetry.dependencies]
 python = ">3.12,<3.15"
-python-dotenv = "*"
 psutil = "*"
 youtube-dl = "*"
 python-dateutil = "*"
@@ -24,10 +23,12 @@ asyncpraw = "*"
 discord-py = {extras = ["voice"], version = "^2.0"}
 asyncpg = "^0.31.0"
 numpy = "^2.4.6"
+python-decouple = "^3.8"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "*"
 pre-commit = "*"
+watchfiles = "^1.2.0"
 
 [tool.poetry.scripts]
 start = "bot.__main__:main"

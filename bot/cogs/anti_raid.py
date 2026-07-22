@@ -7,11 +7,20 @@ import discord
 from discord.ext import commands
 
 from bot.constants import (
-    system_log_channel_id, bait_channel_id, new_member_role_id, tortoise_guild_id, here_mention,
-    everyone_mention, infraction_img_url, bot_trap_role_id
+    bait_channel_id, new_member_role_id, tortoise_guild_id, here_mention, bot_log_channel_id,
+    everyone_mention, infraction_img_url, bot_trap_role_id, appeal_server_link, deterrence_log_channel_id
 )
 from bot.utils.embed_handler import simple_embed
 
+
+appeal_view = discord.ui.View()
+appeal_view.add_item(
+    discord.ui.Button(
+        label="Appeal Ban",
+        emoji=discord.PartialEmoji(name="appeal", id=1520010775845142548),
+        url=appeal_server_link,
+    )
+)
 
 class AntiRaidSpam(commands.Cog):
     """
@@ -35,6 +44,22 @@ class AntiRaidSpam(commands.Cog):
         self.bot = bot
         # guild_id -> member_id -> deque[(ts, channel_id, content, message_id)]
         self.message_log = defaultdict(lambda: defaultdict(deque))
+        self._log_channel = None
+        self._mod_log_channel = None
+
+
+    @property
+    def log_channel(self) -> discord.TextChannel:
+        if self._log_channel is None:
+            self._log_channel = self.bot.get_channel(bot_log_channel_id)
+        return self._log_channel
+
+    @property
+    def mod_log_channel(self) -> discord.TextChannel:
+        if self._mod_log_channel is None:
+            self._mod_log_channel = self.bot.get_channel(deterrence_log_channel_id)
+        return self._mod_log_channel
+
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
@@ -158,7 +183,7 @@ class AntiRaidSpam(commands.Cog):
         except discord.Forbidden:
             return
 
-        await self.log_bot_trap_to_mod_channel(guild, member)
+        await self.log_bot_trap_to_mod_channel(member)
 
     async def handle_raid(
         self,
@@ -166,12 +191,6 @@ class AntiRaidSpam(commands.Cog):
         logs: list[tuple[float, int, str, int]],
     ):
         guild = member.guild
-
-        try:
-            for _, _, _, msg_id in logs:
-                self.bot.suppressed_deletes.add(msg_id)
-        except Exception:
-            pass
 
         await self.send_dm_notice(member, guild)
 
@@ -194,21 +213,17 @@ class AntiRaidSpam(commands.Cog):
                 f"\nYou were banned from **{guild.name}**\n\n"
                 "Our **automated raid protection** system detected spam-like behavior across multiple channels.\n\n"
                 "**If this was a mistake**, you may appeal below.\n\n"
-                f"Click 👉 [APPEAL HERE]({self.APPEAL_SERVER_URL}) 👈\n"
             ),
             color=discord.Color.red()
         )
         embed.set_image(url=infraction_img_url)
         try:
-            await member.send(embed=embed)
+            await member.send(embed=embed, view=appeal_view)
         except discord.Forbidden:
             pass
 
-    async def log_bot_trap_to_mod_channel(self, guild: discord.Guild, member: discord.Member):
+    async def log_bot_trap_to_mod_channel(self, member: discord.Member):
         """Logs bot trap bans to the dedicated system log channel."""
-        channel = guild.get_channel(system_log_channel_id)
-        if channel is None:
-            return
 
         embed = discord.Embed(
             title="Bot Trap Ban Triggered",
@@ -235,25 +250,30 @@ class AntiRaidSpam(commands.Cog):
         embed.set_footer(text=self.BOT_TRAP_BAN_REASON)
 
         try:
-            await channel.send(embed=embed)
+            await self.mod_log_channel.send(embed=embed)
         except discord.Forbidden:
             pass
 
     async def log_to_mod_channel(
-        self,
-        guild: discord.Guild,
-        member: discord.Member,
-        logs: list[tuple[float, int, str, int]],
+            self,
+            guild: discord.Guild,
+            member: discord.Member,
+            logs: list[tuple[float, int, str, int]],
     ):
-        channel = guild.get_channel(system_log_channel_id)
-        if channel is None:
-            return
 
         lines = []
+        image_url = None
+
         for _, channel_id, content, _ in logs:
             ch = guild.get_channel(channel_id)
             name = f"#{ch.name}" if ch else f"#{channel_id}"
             lines.append(f"**{name}:** {content}")
+
+            if "[Attachment]" in content and not image_url:
+                try:
+                    image_url = content.split("[Attachment] ")[1].split(" | ")[0]
+                except IndexError:
+                    pass
 
         embed = discord.Embed(
             title="Raid Ban Triggered",
@@ -282,10 +302,14 @@ class AntiRaidSpam(commands.Cog):
             value=msg_content,
             inline=False,
         )
+
+        if image_url:
+            embed.set_image(url=image_url)
+
         embed.set_footer(text=self.BAN_REASON)
 
         try:
-            await channel.send(embed=embed)
+            await self.mod_log_channel.send(embed=embed)
         except discord.Forbidden:
             pass
 

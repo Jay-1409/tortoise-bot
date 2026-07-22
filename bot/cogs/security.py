@@ -12,13 +12,22 @@ from discord import Member, Message, app_commands, Guild
 from bot import constants
 from bot.utils.embed_handler import info, moderation_log_embed, warning, success, infraction_embed
 from bot.utils.message_handler import RemovableMessage
-from bot.constants import allowed_file_extensions, online_viewer_url
+from bot.constants import allowed_file_extensions, online_viewer_url, appeal_server_link
 from bot.utils.checks import tortoise_bot_developer_only
 from bot.utils.misc import get_user_avatar
 from bot.utils.custom_types import FakeInteraction
 
 logger = logging.getLogger(__name__)
 
+
+appeal_view = discord.ui.View()
+appeal_view.add_item(
+    discord.ui.Button(
+        label="Appeal Ban",
+        emoji=discord.PartialEmoji(name="appeal", id=1520010775845142548),
+        url=appeal_server_link,
+    )
+)
 
 class PDFViewerButtonView(discord.ui.View):
 
@@ -39,6 +48,8 @@ class Security(commands.Cog):
         self._guild = None
         self._trusted = None
         self._log_channel = None
+        self._mod_log_channel = None
+        self._message_log_channel = None
 
         self.interaction_cooldowns = {}
 
@@ -60,6 +71,18 @@ class Security(commands.Cog):
             self._log_channel = self.bot.get_channel(constants.bot_log_channel_id)
         return self._log_channel
 
+    @property
+    def message_log_channel(self):
+        if self._message_log_channel is None:
+            self._message_log_channel = self.bot.get_channel(constants.message_log_channel_id)
+        return self._message_log_channel
+
+    @property
+    def mod_log_channel(self):
+        if self._mod_log_channel is None:
+            self._mod_log_channel = self.bot.get_channel(constants.deterrence_log_channel_id)
+        return self._mod_log_channel
+
     @classmethod
     def get_invite_link_code(cls, string: str):
         return string.split("/")[-1]
@@ -75,8 +98,7 @@ class Security(commands.Cog):
     async def _enable_protection_after_delay(self):
         await asyncio.sleep(300)
         self.bot.advanced_protection = True
-        if self.log_channel:
-            await self.log_channel.send(embed=success("Advanced Protection™ Enabled."))
+        await self.log_channel.send(embed=success("Bot Protection™ Enabled."))
 
     async def security_check(self, message: Message):
         """
@@ -88,10 +110,7 @@ class Security(commands.Cog):
             return
 
         if message.attachments:
-            await self.process_pdf_attachments(message)
-            deleted = await self.deal_with_attachments(message)
-            if deleted:
-                self.bot.suppressed_deletes.add(message.id)
+            await self.deal_with_attachments(message)
 
     def is_security_whitelisted(self, message: Message) -> bool:
         """
@@ -233,9 +252,6 @@ class Security(commands.Cog):
             except discord.NotFound:
                 pass
 
-        if not self.log_channel:
-            return
-
         content = self.extract_content(message)
 
         embed = moderation_log_embed(
@@ -246,7 +262,7 @@ class Security(commands.Cog):
         )
         embed.set_footer(text=f"Author: {message.author}", icon_url=get_user_avatar(message.author))
 
-        await self.log_channel.send(embed=embed, files=files_to_log)
+        await self.message_log_channel.send(embed=embed, files=files_to_log)
 
 
     async def deal_with_attachments(self, message: Message) -> bool:
@@ -255,6 +271,8 @@ class Security(commands.Cog):
         :param message: message to check for attachments
         :return: bool, was the passed message deleted or not?
         """
+        await self.process_pdf_attachments(message)
+
         async with aiohttp.ClientSession() as session:
             for attachment in message.attachments:
                 try:
@@ -330,7 +348,7 @@ class Security(commands.Cog):
         embed.set_footer(text="⚠️ This was an automated action. If you'd like to appeal, join the appeal server.")
 
         try:
-            await member.send(embed=embed)
+            await member.send(embed=embed, view=appeal_view)
         except discord.Forbidden:
             pass
 
@@ -342,7 +360,7 @@ class Security(commands.Cog):
             reason=reason
         )
         log_embed.set_footer(text="⚠️ This was an automated action.")
-        await self.log_channel.send(embed=log_embed)
+        await self.mod_log_channel.send(embed=log_embed)
         await member.ban(reason=f"AutoMod racial and homophobic slur rule triggered")
 
     @commands.Cog.listener()
@@ -353,10 +371,6 @@ class Security(commands.Cog):
     async def on_message_delete(self, message: discord.Message):
 
         if self.is_security_whitelisted(message):
-            return
-
-        if message.id in self.bot.suppressed_deletes:
-            self.bot.suppressed_deletes.discard(message.id)
             return
 
         await self.archive_and_delete_message(
@@ -374,16 +388,9 @@ class Security(commands.Cog):
 
         filtered = []
         for msg in messages:
-            if msg.id in self.bot.suppressed_deletes:
-                self.bot.suppressed_deletes.discard(msg.id)
-                continue
             filtered.append(msg)
 
         if not filtered:
-            return
-
-        channel = self.log_channel
-        if channel is None:
             return
 
         entries = []
@@ -437,9 +444,9 @@ class Security(commands.Cog):
 
             # upload files after embed
             if i == 1 and files_to_log:
-                await channel.send(embed=embed, files=files_to_log)
+                await self.message_log_channel.send(embed=embed, files=files_to_log)
             else:
-                await channel.send(embed=embed)
+                await self.message_log_channel.send(embed=embed)
 
 
     @staticmethod
@@ -481,7 +488,7 @@ class Security(commands.Cog):
             )
             embed = info(msg, msg_before.guild.me, title="Message edited")
             embed.set_footer(text=f"Author: {msg_before.author}", icon_url=get_user_avatar(msg_before.author))
-            await self.log_channel.send(embed=embed)
+            await self.message_log_channel.send(embed=embed)
 
         # Check if the new message violates our security
         await self.security_check(msg_after)
@@ -493,7 +500,7 @@ class Security(commands.Cog):
         """Temporarily disables Advanced Protection."""
         await interaction.response.defer()
         self.bot.advanced_protection = False
-        await interaction.followup.send(embed=warning(f"Advanced Protection™ Disabled for 5 minutes."), ephemeral=False)
+        await interaction.followup.send(embed=warning(f"Bot Protection™ Disabled for 5 minutes."), ephemeral=False)
         self.bot.loop.create_task(self._enable_protection_after_delay())
 
     @app_commands.command()
@@ -503,7 +510,7 @@ class Security(commands.Cog):
         """Enable Advanced Protection."""
         await interaction.response.defer()
         self.bot.advanced_protection = True
-        await interaction.followup.send(embed=success(f"Advanced Protection™ Enabled."), ephemeral=False)
+        await interaction.followup.send(embed=success(f"Bot Protection™ Enabled."), ephemeral=False)
 
 
 async def setup(bot):
