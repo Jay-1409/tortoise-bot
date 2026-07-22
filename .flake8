@@ -15,4 +15,5 @@ exclude =
     dev,
     test.py,
     .venv,
-    docs
+    docs,
+    manager.py

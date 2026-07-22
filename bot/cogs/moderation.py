@@ -25,6 +25,7 @@ appeal_view.add_item(
     )
 )
 
+
 class DMModal(discord.ui.Modal, title="Send DM to Role"):
     def __init__(self, messageable: Union[discord.Role, discord.Member], interaction: discord.Interaction):
         super().__init__()
@@ -57,11 +58,11 @@ class DMModal(discord.ui.Modal, title="Send DM to Role"):
             try:
                 await self.messageable.send(embed=embed)
                 await interaction.followup.send(
-                    embed=success(f"Successfully notified user.")
+                    embed=success("Successfully notified user.")
                 )
             except Exception:
                 await interaction.followup.send(
-                    embed=success(f"Failed to notify user. DMs closed.")
+                    embed=success("Failed to notify user. DMs closed.")
                 )
         else:
             members = (m for m in self.messageable.members if not m.bot)
@@ -105,8 +106,6 @@ class DMModal(discord.ui.Modal, title="Send DM to Role"):
                 )
 
                 logger.info(f"Failed to DM: {failed_logs}")
-
-
 
 
 class Moderation(commands.Cog):
@@ -164,11 +163,9 @@ class Moderation(commands.Cog):
                 ephemeral=True
             )
 
-
         deterrence_embed = infraction_embed(interaction, member, constants.Infraction.kick, reason)
         await self.deterrence_log_channel.send(embed=deterrence_embed)
         return await interaction.followup.send(embed=success(f"{member.name} successfully kicked."))
-
 
     # @app_commands.command(enabled=False)
     # @app_commands.checks.bot_has_permissions(administrator=True)
@@ -214,7 +211,8 @@ class Moderation(commands.Cog):
         """
         await self._mass_ban_timestamp_helper(interaction, timestamp_start, timestamp_end, reason)
 
-    async def _mass_ban_timestamp_helper(self, interaction, timestamp_start: datetime, timestamp_end: datetime, reason: str):
+    async def _mass_ban_timestamp_helper(
+            self, interaction, timestamp_start: datetime, timestamp_end: datetime, reason: str):
         members_to_ban = []
 
         for member in self.tortoise_guild.members:
@@ -225,7 +223,10 @@ class Moderation(commands.Cog):
                 members_to_ban.append(member)
 
         if not members_to_ban:
-            return await interaction.response.send_message(embed=failure("Could not find any members, aborting.."), ephemeral=True)
+            return await interaction.response.send_message(
+                embed=failure("Could not find any members, aborting.."),
+                ephemeral=True
+            )
 
         members_to_ban.sort(key=lambda m: m.joined_at)
 
@@ -250,7 +251,9 @@ class Moderation(commands.Cog):
                     interaction.user
                 )
             )
-            logger.info(f"{interaction.user} is timestamp banning: {', '.join(str(member.id) for member in members_to_ban)}")
+            logger.info(
+                f"{interaction.user} is timestamp banning: {', '.join(str(member.id) for member in members_to_ban)}"
+            )
 
             for count, member in enumerate(members_to_ban):
                 if count != 0 and count % notify_interval == 0:
@@ -264,7 +267,6 @@ class Moderation(commands.Cog):
         else:
             await interaction.followup.send(embed=info("Aborting mass ban.", interaction.client.user))
 
-
     @app_commands.command()
     @app_commands.checks.bot_has_permissions(ban_members=True)
     @app_commands.check(check_if_tortoise_mod)
@@ -276,7 +278,7 @@ class Moderation(commands.Cog):
                   permanent: bool = False):
         """Bans  member from the guild."""
         await interaction.response.defer()
-        await self._ban_helper(interaction, user, reason,True, True, permanent)
+        await self._ban_helper(interaction, user, reason, True, True, permanent)
         await interaction.followup.send(embed=success(f"{user} successfully banned."), ephemeral=True)
 
     @app_commands.command(name="ban_with_id")
@@ -372,13 +374,10 @@ class Moderation(commands.Cog):
                     "Please use the invite link to rejoin the server\n",
                     self.bot.user,
                     "Ban Lifted!",
-                    "Welcome back to Tortoise Programming Community!",
-               )
-            )
-        except Exception as e:
+                    "Welcome back to Tortoise Programming Community!"))
+        except Exception:
             pass
         await interaction.followup.send(embed=success(f"{user} successfully unbanned."), ephemeral=True)
-
 
     @app_commands.command(name="warn")
     @app_commands.checks.bot_has_permissions(manage_messages=True)
@@ -412,14 +411,6 @@ class Moderation(commands.Cog):
             await member.send(embed=dm_embed)
         except discord.Forbidden:
             pass
-
-        # try:
-        #     await self.bot.api_client.add_member_warning(interaction.user.id, member.id, reason)
-        # except Exception as e:
-        #     msg = "Could not apply warning, problem with API."
-        #     logger.info(f"{msg} {e}")
-        #     await interaction.response.send_message(embed=failure(f"{msg}\nInfraction member should not think he got away."), ephemeral=True)
-        # else:
 
         await self.deterrence_log_channel.send(
             embed=infraction_embed(interaction, member, constants.Infraction.warning, reason, False)
@@ -459,7 +450,6 @@ class Moderation(commands.Cog):
         warnings_embed = thumbnail(f"Warnings: {count}", member, "Warning count")
         await interaction.response.send_message(embed=warnings_embed, ephemeral=True)
 
-
     @app_commands.command()
     @app_commands.checks.bot_has_permissions(manage_messages=True)
     @app_commands.check(check_if_tortoise_mod)
@@ -493,7 +483,6 @@ class Moderation(commands.Cog):
             embed=success(f"Cleared {len(deleted)} messages."),
             ephemeral=True
         )
-
 
     @app_commands.command()
     @app_commands.checks.bot_has_permissions(moderate_members=True)
@@ -542,7 +531,6 @@ class Moderation(commands.Cog):
         )
         # await self.bot.api_client.add_member_warning(interaction.user.id, member.id, f"Timeout: {reason}")
 
-
     @app_commands.command(name="dm_members")
     @app_commands.checks.cooldown(1, 900)
     @app_commands.checks.has_permissions(administrator=True)
@@ -556,7 +544,6 @@ class Moderation(commands.Cog):
     async def dm_member(self, interaction: discord.Interaction, member: discord.Member):
         """Opens a modal to DM a member"""
         await interaction.response.send_modal(DMModal(member, interaction))
-
 
     @app_commands.command(name="send")
     @app_commands.checks.has_permissions(manage_messages=True)

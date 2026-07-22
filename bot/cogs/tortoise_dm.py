@@ -156,6 +156,7 @@ class ModMailCloseReasonModal(discord.ui.Modal, title="Close Mod Mail with Respo
 
         await interaction.followup.send(embed=success("Closed and response sent successfully."), ephemeral=True)
 
+
 class ModMailReasonModal(discord.ui.Modal, title="Contact Staff (Mod Mail)"):
     reason = discord.ui.Label(
         text="Reason for contacting staff",
@@ -231,6 +232,7 @@ class DutyScheduleModal(discord.ui.Modal, title="Set Daily Mod Mail Schedule"):
                 f"{self.start_time.value} and {self.end_time.value} ({tz_str})."
             ), ephemeral=True
         )
+
 
 class DMInitView(discord.ui.View):
     def __init__(self, cog: "TortoiseDM", user: discord.User):
@@ -340,7 +342,6 @@ class ModMailAcceptView(discord.ui.View):
             color=discord.Color.green(),
             view=self
         )
-
 
         try:
             await mod.send(
@@ -488,7 +489,11 @@ class ModMailAcceptView(discord.ui.View):
                     except discord.HTTPException:
                         pass
 
-    @discord.ui.button(label="Resolve with Reason", style=discord.ButtonStyle.blurple, custom_id="close_modmail_reason_btn")
+    @discord.ui.button(
+        label="Resolve with Reason",
+        style=discord.ButtonStyle.blurple,
+        custom_id="close_modmail_reason_btn"
+    )
     async def close_with_reason(self, interaction: discord.Interaction, button: discord.ui.Button):
         mod = interaction.user
         user_id = self.user_id
@@ -624,10 +629,12 @@ class TortoiseDM(commands.Cog):
 
             for record in schedules:
                 guild = self.bot.get_guild(record["guild_id"])
-                if not guild: continue
+                if not guild:
+                    continue
 
                 member = guild.get_member(record["user_id"])
-                if not member: continue
+                if not member:
+                    continue
 
                 user_tz = ZoneInfo(record["timezone"])
                 local_now = now_utc.astimezone(user_tz)
@@ -713,7 +720,6 @@ class TortoiseDM(commands.Cog):
         view = DMInitView(self, output)
         await output.send(embed=embed, view=view)
 
-
     def is_any_session_active(self, user_id: int) -> bool:
         return any(
             user_id in active for active in (
@@ -792,7 +798,8 @@ class TortoiseDM(commands.Cog):
         except Exception:
             pass
 
-    async def create_mod_mail(self, user: discord.User, reason: str = "No reason provided.", source: str = "dm", ping=True):
+    async def create_mod_mail(self, user: discord.User, reason: str = "No reason provided.",
+                              source: str = "dm", ping=True):
         if user.id in self.pending_mod_mails:
             try:
                 await user.send(embed=failure("You already have a pending mod mail, please be patient."))
@@ -857,7 +864,8 @@ class TortoiseDM(commands.Cog):
         await user.send(embed=success("Bug report successfully submitted, thank you."))
         self.active_bug_reports.remove(user.id)
 
-    async def _get_user_reply(self, container: set, user: discord.User, sub_type: str, sub_format=None) -> Union[str, None]:
+    async def _get_user_reply(self, container: set, user: discord.User,
+                              sub_type: str, sub_format=None) -> Union[str, None]:
         """
         Helper method to get user reply, only deals with errors.
         Uses self._wait_for method so it can get both the user message reply and text from attachment file.
@@ -886,7 +894,8 @@ class TortoiseDM(commands.Cog):
         else:
             return user_reply_content
 
-    async def _wait_for(self, container: set, user: discord.User, sub_type: str, sub_format = None) -> Union[discord.Message, None]:
+    async def _wait_for(self, container: set, user: discord.User,
+                        sub_type: str, sub_format=None) -> Union[discord.Message, None]:
         """
         Simple custom wait_for that waits for user reply for 5 minutes and has ability to cancel the wait,
         deal with errors and deal with containers (which mark users that are currently doing something aka
@@ -971,6 +980,7 @@ class TortoiseDM(commands.Cog):
         if self.mod_mail_ping_role in interaction.user.roles:
             await interaction.user.remove_roles(self.mod_mail_ping_role, reason="Schedule deleted.")
         await interaction.response.send_message(embed=success("Your ping schedule has been deleted."), ephemeral=True)
+
 
 async def setup(bot):
     await bot.add_cog(TortoiseDM(bot))

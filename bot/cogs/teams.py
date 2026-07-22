@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from bot.bot import Bot
 
+
 class CreateTeamModal(discord.ui.Modal, title="Create Team"):
 
     name = discord.ui.TextInput(label="Team Name", max_length=50)
@@ -108,7 +109,6 @@ class CreateTeamModal(discord.ui.Modal, title="Create Team"):
                 overwrites=overwrites
             )
 
-
             team_id = await self.cog.team.create_team(
                 guild.id,
                 name,
@@ -181,7 +181,7 @@ class CreateTeamModal(discord.ui.Modal, title="Create Team"):
         )
 
         await self.cog.update_dashboard(guild)
-        
+
         await interaction.followup.send(
             embed=success("Team setup complete!")
         )
@@ -252,6 +252,7 @@ class PersistentJoinRequestView(discord.ui.View):
         return await interaction.response.send_message(
             "Select a team you wish to join:", view=view, ephemeral=True
         )
+
 
 class JoinReasonModal(discord.ui.Modal, title="Join Team Reason"):
     reason = discord.ui.TextInput(
@@ -476,7 +477,6 @@ class TeamCog(commands.Cog):
         elif custom_id.startswith("leader_approve") or custom_id.startswith("leader_reject"):
             await self._handle_leader_decision(interaction, custom_id)
 
-
     @team_group.command(name="send_setup")
     @app_commands.check(tortoise_bot_developer_only)
     @app_commands.default_permissions(administrator=True)
@@ -562,7 +562,6 @@ class TeamCog(commands.Cog):
 
         return await interaction.followup.send(embed=success("Team deleted successfully."), ephemeral=True)
 
-
     @team_group.command(name="invite")
     async def invite(self, interaction, member: discord.Member):
 
@@ -593,7 +592,6 @@ class TeamCog(commands.Cog):
                     "User is already a team member.",
                 )
             )
-
 
         await interaction.response.defer(thinking=True)
 
@@ -705,7 +703,7 @@ class TeamCog(commands.Cog):
                     f"You have been {reason} from team **{team['name']}**.", self.bot.user, ""
                 )
                 remove_embed.set_footer(
-                    text=f"This may be due your inactivity. You are welcome to reapply"
+                    text="This may be due your inactivity. You are welcome to reapply"
                 )
                 await member.send(
                     embed=remove_embed
@@ -839,7 +837,7 @@ class TeamCog(commands.Cog):
 
         try:
             msg = await channel.fetch_message(teams_dashboard_message_id)
-        except:
+        except Exception:
             return
 
         embed = await self._build_team_embed(guild)
@@ -895,7 +893,7 @@ class TeamCog(commands.Cog):
             await interaction.followup.send(embed=success("Join request accepted"), ephemeral=True)
             try:
                 await member.send(embed=success(f"You joined team **{team['name']}**!"))
-            except:
+            except Exception:
                 pass
             await self.log_channel.send(
                 embed=info(
@@ -917,7 +915,7 @@ class TeamCog(commands.Cog):
                     await member.send(
                         embed=reject_embed
                     )
-                except:
+                except Exception:
                     pass
                 await self.log_channel.send(
                     embed=info(
@@ -926,7 +924,6 @@ class TeamCog(commands.Cog):
                     )
                 )
         return None
-
 
     @team_group.command(name="send_join_request_button")
     @app_commands.check(tortoise_bot_developer_only)

@@ -143,7 +143,10 @@ class SandboxExec(commands.Cog):
             space_req = max(0, 99 - len(time_text))
             spacer = "\u0020" * space_req
 
-            embed.set_footer(text=f"{time_text}{spacer}Powered by Hermes Engine", icon_url=f"https://lairesit.sirv.com/Tortoise/{language}.png")
+            embed.set_footer(
+                text=f"{time_text}{spacer}Powered by Hermes Engine",
+                icon_url=f"https://lairesit.sirv.com/Tortoise/{language}.png"
+            )
 
         if target_message:
             await target_message.edit(embed=embed)
@@ -155,7 +158,6 @@ class SandboxExec(commands.Cog):
                 link_view = view
                 self.last_link_time = datetime.now()
             return await channel.send(embed=embed, view=link_view)
-
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

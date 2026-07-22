@@ -34,7 +34,6 @@ class RoleProgression(commands.Cog):
         self.active_plus_role_check.cancel()
         self.other_progression_role_check.cancel()
 
-
     def role(self, role_id):
         return self.guild.get_role(role_id)
 
@@ -98,7 +97,6 @@ class RoleProgression(commands.Cog):
     def activity_role_ids(self) -> Set[int]:
         return set(constants.automatically_assigned_roles)
 
-
     @tasks.loop(minutes=5)
     async def flush_cache(self):
 
@@ -134,8 +132,9 @@ class RoleProgression(commands.Cog):
                 try:
                     await member.send(
                         embed=info(
-                            "You have earned the **Active** badge.\n" + constants.automatically_assigned_roles[self.active_role.id],
-                             self.bot.user,
+                            "You have earned the **Active** badge.\n" +
+                            constants.automatically_assigned_roles[self.active_role.id],
+                            self.bot.user,
                             "Achievement Unlocked ✨",
                             "Issued only to the active members in the server!")
                     )
@@ -145,7 +144,6 @@ class RoleProgression(commands.Cog):
                 await self.log_channel.send(
                     embed=info(f"{member.mention} reached **Active** milestone.", self.bot.user, "")
                 )
-
 
     @tasks.loop(hours=12)
     async def active_plus_role_check(self):
@@ -206,7 +204,8 @@ class RoleProgression(commands.Cog):
                 try:
                     await member.send(
                         embed=info(
-                            "You have earned the **Chronically Online** badge.\n" + constants.automatically_assigned_roles[
+                            "You have earned the **Chronically Online** badge.\n" +
+                            constants.automatically_assigned_roles[
                                 self.chronically_online_role.id],
                             self.bot.user,
                             "Well Done 🌟",
@@ -249,7 +248,6 @@ class RoleProgression(commands.Cog):
         uid = member.id
 
         self.message_cache[uid] += 1
-
 
     def determine_stage(self, member: discord.Member):
 
@@ -311,7 +309,6 @@ class RoleProgression(commands.Cog):
             return mods >= 2
 
         return False
-
 
     async def promote_user(self, member, stage):
 
@@ -402,11 +399,10 @@ class RoleProgression(commands.Cog):
             pass
 
         await self.log_channel.send(embed=info(f"{member.mention} was promoted to **{role.mention}**",
-                                               self.bot.user, "",f"Given by: {interaction.user}"))
+                                               self.bot.user, "", f"Given by: {interaction.user}"))
 
         await interaction.followup.send(
             embed=success(f"{member.mention} is promoted to {role.mention}", interaction.client.user), ephemeral=True)
-
 
     @app_commands.command(name="nominate")
     async def nominate(self, interaction: discord.Interaction, member: discord.Member):
@@ -470,8 +466,7 @@ class RoleProgression(commands.Cog):
 
         await self.log_channel.send(
             embed=info(
-                f"{interaction.user} nominated {member.mention} for **{stage}**."
-            , self.bot.user, "")
+                f"{interaction.user} nominated {member.mention} for **{stage}**.", self.bot.user, "")
         )
 
         if await self.stage_passed(member, stage):
@@ -538,7 +533,8 @@ class RoleProgression(commands.Cog):
             "## Server Role Progression\n\n"
             "Roles in this server recognize **activity, contribution, and trust within the community**. "
             "Some roles are earned automatically through participation, some are awarded through "
-            "**community nominations**, and a few are **granted directly for special achievements or contributions**.\n\n"
+            "**community nominations**, and a few are **granted directly "
+            "for special achievements or contributions**.\n\n"
 
             "### Activity Roles\n"
             "Earn these automatically by being active in chat.\n\n"
@@ -618,7 +614,6 @@ class RoleProgression(commands.Cog):
 
     def check_for_active_roles(self, member):
         return bool(self.activity_role_ids & {role.id for role in member.roles})
-
 
 
 async def setup(bot):
