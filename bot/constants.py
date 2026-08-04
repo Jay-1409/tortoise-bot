@@ -13,6 +13,7 @@ github_repo_link = "https://github.com/Tortoise-Community/Tortoise-BOT"
 line_img_url = "https://www.animatedimages.org/data/media/562/animated-line-image-0015.gif"
 infraction_img_url = "https://www.animatedimages.org/data/media/562/animated-line-image-0538.gif"
 banner_url = "https://lairesit.sirv.com/Tortoise/banner.jpg"
+info_banner_url = "https://lairesit.sirv.com/Tortoise/tortoise-info.jpg"
 github_repo_stats_endpoint = "https://api.github.com/repos/Tortoise-Community/"
 project_url = "https://www.tyxc.org/projects/"
 events_url = "https://www.tyxc.org/events/"
@@ -42,11 +43,18 @@ code_submissions_log_channel_id = bot_log_channel_id
 
 bot_dev_channel_id = 692851221223964822
 general_channel_id = 577192344533598472
+today_i_did_channel_id = 1527705624073474169
+resume_roasting_channel = 1507008205232935122
 staff_channel_id = 580809054067097600
+rules_channel_id = 1522180967136231445
 
 # Tortoise Guild channels
 leetcode_channel_id = 726403782740541470
+programming_channel_id = 577195845376802826
+opensource_channel_id = 581483558410125372
+discussion_voice_channel_id = 1457383811406102762
 bot_cmd_channel_id = 581726653710073858
+focus_music_channel_id = 1515440479636820169
 project_showcase_channel_id = 581156991557304330
 resources_channel_id = 577195878620725251
 challenge_submission_channel_id = 780842875901575228
@@ -56,6 +64,17 @@ challenge_logs_public_channel_id = 1524682332005728257
 bait_channel_id = 1461666781612740750
 introduction_channel_id = 1487413734056923236
 join_a_team_channel_id = 1489264049983197246
+
+# Team channels
+team_plan_channel_id=1498315759506686115
+team_forum_channel_id=1498316149035896874
+team_chat_channel_id=1497109933001543740
+team_discussion_channel_id=1506559418555174932
+team_voice_channel_id=1497109934029144074
+
+# Marketplace channels
+job_board_channel_id=1520372693067632693
+dev_board_channel_id=1520372693126348848
 
 # Ban Appeal Channels
 ban_appeal_channel_id = 1464188530396893336
@@ -85,6 +104,10 @@ boot_role_id = 1472793802740596839
 apprentice_role_id = 1472725760723648522
 fellow_role_id = 1472793939630358731
 elite_role_id = 1515787455184240722
+
+rules_emoji_id=1534128065104576522
+roles_emoji_id=1534127242081206322
+channels_emoji_id=1534124243640385536
 
 mod_mail_ping_role_id = 1493890424518086807
 bot_trap_role_id = 1505158956811685908
