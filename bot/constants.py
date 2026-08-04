@@ -73,8 +73,8 @@ team_discussion_channel_id=1506559418555174932
 team_voice_channel_id=1497109934029144074
 
 # Marketplace channels
-job_board_channel_id=1520372693067632693
-dev_board_channel_id=1520372693126348848
+job_board_channel_id=1472363495608815852
+dev_board_channel_id=1472363116296933448
 
 # Ban Appeal Channels
 ban_appeal_channel_id = 1464188530396893336
