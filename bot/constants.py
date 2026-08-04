@@ -46,7 +46,7 @@ general_channel_id = 577192344533598472
 today_i_did_channel_id = 1527705624073474169
 resume_roasting_channel = 1507008205232935122
 staff_channel_id = 580809054067097600
-rules_channel_id = 1522180967136231445
+rules_channel_id = 738986778396196935
 
 # Tortoise Guild channels
 leetcode_channel_id = 726403782740541470
