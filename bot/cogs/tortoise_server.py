@@ -228,7 +228,7 @@ class TortoiseServer(commands.Cog):
                         f"**Challenges**: Compete and learn in <#{constants.challenges_channel_id}>.\n"
                         f"**Projects**: Show off your creations in <#{constants.project_showcase_channel_id}>.\n"
                         f"**LeetCode**: Discuss and solve problems in <#{constants.leetcode_channel_id}>.\n"
-                        f"**Teams**: Join a project team in <#{constants.join_a_team_channel_id}>.\n\n"
+                        f"**Teams**: Join a DSA study group in <#{constants.join_a_team_channel_id}>.\n\n"
                         "We’re glad to have you here! 🐢"
                     ),
                 },
