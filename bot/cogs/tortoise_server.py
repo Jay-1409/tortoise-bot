@@ -1,3 +1,10 @@
+"""
+Credits
+Welcome info component is directly inspired from DuckyBot in ente.io support server
+Repository: https://github.com/brog-io/DuckyBot/blob/main/cogs/server_manager.py
+"""
+
+
 import logging
 import datetime
 import re
