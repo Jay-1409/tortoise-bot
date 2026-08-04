@@ -406,7 +406,7 @@ class TortoiseServer(commands.Cog):
                 ephemeral=True,
             )
 
-    @commands.Cog.listener()
+    # @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
             return
