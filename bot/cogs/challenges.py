@@ -41,10 +41,21 @@ from bot.utils.challenge import (
     positive_integer_env,
     slug_from_title,
 )
-from bot.utils.embed_handler import failure, info, success, warning, build_rules_embed
+from bot.utils.embed_handler import (
+    build_rules_embed,
+    failure,
+    info,
+    success,
+    warning,
+)
 
 
 logger = logging.getLogger(__name__)
+
+CHALLENGE_INFO_CHOICES = [
+    app_commands.Choice(name="View a problem statement", value="view"),
+    app_commands.Choice(name="Submit a problem statement", value="submit"),
+]
 
 LANGUAGE_CHOICES = [
     app_commands.Choice(name=name, value=value)
@@ -187,6 +198,21 @@ class Challenges(commands.Cog):
     @challenge_group.command(name="rules", description="Show challenge guidelines.")
     async def challenge_rules(self, interaction: discord.Interaction):
         await interaction.response.send_message(embed=build_rules_embed(self.bot.user))
+
+    @challenge_group.command(name="info", description="Show how coding challenges work.")
+    @app_commands.choices(action=CHALLENGE_INFO_CHOICES)
+    @app_commands.describe(action="Choose the guide to display.")
+    async def challenge_info(
+        self,
+        interaction: discord.Interaction,
+        action: app_commands.Choice[str],
+    ):
+        embed = discord.Embed(title=action.name, color=discord.Color.green())
+        embed.set_image(url=f"https://lairesit.sirv.com/Tortoise/{action.value}.gif")
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=False,
+        )
 
     @challenge_group.command(name="add-points", description="Give points to a user.")
     @app_commands.check(check_if_tortoise_staff)
@@ -425,16 +451,7 @@ class Challenges(commands.Cog):
         language: Optional[app_commands.Choice[str]] = None,
     ):
         if problem is None:
-            rows = await self.challenge_manager.list_problems(interaction.guild_id)
-            if not rows:
-                await interaction.response.send_message(embed=warning("No active problems yet."), ephemeral=True)
-                return
-
-            body = "\n".join(
-                f"`{row['slug']}` — **{row['title']}** ({row['points']} pts)"
-                for row in rows
-            )
-            await interaction.response.send_message(embed=info(body, self.bot.user, "Active Problems"), ephemeral=True)
+            await self.send_problem_list(interaction)
             return
 
         if language is None:
@@ -482,6 +499,26 @@ class Challenges(commands.Cog):
             embed=embed,
             files=[statement_file, starter_file],
             ephemeral=True,
+        )
+
+    async def send_problem_list(self, interaction: discord.Interaction, *, ephemeral: bool = True):
+        rows = await self.challenge_manager.list_problems(interaction.guild_id)
+        if not rows:
+            await interaction.response.send_message(
+                embed=warning("No active problems yet."),
+                ephemeral=ephemeral,
+            )
+            return
+
+        body = "\n".join(
+            f"`{row['slug']}` — **{row['title']}** ({row['points']} pts)"
+            for row in rows
+        )
+        embed = info(body, self.bot.user, "View a Problem Statement")
+        embed.set_image(url="https://lairesit.sirv.com/Tortoise/view.gif")
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=ephemeral,
         )
 
     @challenge_group.command(name="submit", description="Submit a solution by pasting code into a popup form.")
