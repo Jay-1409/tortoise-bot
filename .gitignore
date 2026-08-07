@@ -118,3 +118,5 @@ config/
 
 .DS_Store
 *.excalidraw
+
+/bot/docs/assets/challenges/
