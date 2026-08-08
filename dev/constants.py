@@ -40,20 +40,32 @@ code_submissions_log_channel_id = bot_log_channel_id
 
 bot_dev_channel_id = 1520372693155971105
 general_channel_id = 1520372692446871668
+today_i_did_channel_id = 1535663240015519755
+resume_roasting_channel = 1520372692446871669
 staff_channel_id = 1520372692090359890
+rules_channel_id = 1522180967136231445
 
 #Tortoise Guild channels
 leetcode_channel_id = 1520372692446871674
+programming_channel_id = 1520372692820426862
+opensource_channel_id = 1520372692820426863
+discussion_voice_channel_id = 1520372692820426864
 bot_cmd_channel_id = 1520372692446871671
+focus_music_channel_id = 1520372692446871672
 project_showcase_channel_id = 1520372692446871670
 resources_channel_id = 1520372692090359895
 challenge_submission_channel_id = 1520372692820426866
 challenge_discussion_channel_id = 1520372692820426867
 challenges_channel_id = 1522906649973751898
+challenge_logs_public_channel_id = 1524679248219213864
 bait_channel_id = 1520372693294125167
 introduction_channel_id = 1520372692090359897
 join_a_team_channel_id = 1520372692446871665
-challenge_logs_public_channel_id = 1524679248219213864
+
+# Marketplace channels
+job_board_channel_id = 1520372693067632693
+dev_board_channel_id = 1520372693126348848
+
 # Ban Appeal Channels
 ban_appeal_channel_id = 1520372693155971106
 
