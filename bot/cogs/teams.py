@@ -758,8 +758,9 @@ class TeamCog(commands.Cog):
     async def remove_member(self, interaction: discord.Interaction, member: str):
         guild = interaction.guild
 
-        guild_member = guild.get_member(int(member))
-        if not guild_member:
+        try:
+            guild_member = guild.get_member(int(member))
+        except:
             return await interaction.response.send_message("User not found")
 
         team = await self.team.get_team_by_leader(guild.id, interaction.user.id)
