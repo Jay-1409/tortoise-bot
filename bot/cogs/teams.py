@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -17,7 +16,6 @@ if TYPE_CHECKING:
 
 
 class CreateTeamModal(discord.ui.Modal, title="Create Team"):
-
     name = discord.ui.TextInput(label="Team Name", max_length=50)
     timezone = discord.ui.TextInput(label="Timezone (e.g. IST, EST)")
     description = discord.ui.TextInput(
@@ -235,7 +233,7 @@ class PersistentJoinRequestView(discord.ui.View):
         style=discord.ButtonStyle.blurple,
         custom_id="team_request_join_start"
     )
-    async def request_join(self, interaction: discord.Interaction, button: discord.ui.Button): # noqa
+    async def request_join(self, interaction: discord.Interaction, button: discord.ui.Button):  # noqa
         existing = await self.cog.team.get_user_team(interaction.guild.id, interaction.user.id)
         if existing:
             return await interaction.response.send_message(
@@ -454,6 +452,38 @@ class TeamCog(commands.Cog):
         return await interaction.response.send_modal(
             CreateTeamModal(self, guild.id, invite_id)
         )
+
+    async def get_team_members(self, interaction: discord.Interaction, current: str):
+        options = []
+        team_members = await self.team.get_user_team_members(
+            interaction.user.id
+        )
+
+        for team_member in team_members[::-1]:
+            user_id = team_member["user_id"]
+
+            if user_id == interaction.user.id:
+                continue
+
+            if len(options) == 25:
+                break
+
+            member = interaction.guild.get_member(user_id)
+
+            if member is None:
+                continue
+
+            member_name = member.display_name
+
+            if current.lower() in member_name.lower():
+                options.append(
+                    app_commands.Choice(
+                        name=member_name,
+                        value=str(user_id)
+                    )
+                )
+
+        return options
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -724,9 +754,14 @@ class TeamCog(commands.Cog):
         return True, None
 
     @team_group.command(name="remove_member")
-    async def remove_member(self, interaction, member: discord.Member):
-
+    @app_commands.autocomplete(member=get_team_members)
+    async def remove_member(self, interaction: discord.Interaction, member: str):
         guild = interaction.guild
+
+        guild_member = guild.get_member(int(member))
+        if not guild_member:
+            return await interaction.response.send_message("User not found")
+
         team = await self.team.get_team_by_leader(guild.id, interaction.user.id)
 
         if not team:
@@ -735,14 +770,14 @@ class TeamCog(commands.Cog):
                 ephemeral=True
             )
 
-        if member.id == interaction.user.id:
+        if guild_member.id == interaction.user.id:
             return await interaction.response.send_message(
                 embed=warning("You cannot remove yourself."),
                 ephemeral=True
             )
 
         role = guild.get_role(team["role_id"])
-        if not role or role not in member.roles:
+        if not role or role not in guild_member.roles:
             return await interaction.response.send_message(
                 embed=warning("User not in team."),
                 ephemeral=True
@@ -751,7 +786,7 @@ class TeamCog(commands.Cog):
         await interaction.response.defer(thinking=True)
 
         success_flag, err = await self._remove_member_core(
-            guild, team, member,
+            guild, team, guild_member,
             actor=interaction.user,
             reason="removed"
         )
@@ -760,7 +795,7 @@ class TeamCog(commands.Cog):
             return await interaction.followup.send(embed=failure(err))
 
         return await interaction.followup.send(
-            embed=success(f"{member.mention} removed from team.")
+            embed=success(f"{guild_member.mention} removed from team.")
         )
 
     @team_group.command(name="leave")

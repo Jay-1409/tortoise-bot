@@ -991,6 +991,15 @@ class TeamManager:
             ORDER BY joined_at ASC
         """, team_id)
 
+    async def get_user_team_members(self, user_id: int):
+        return await self.db.pool.fetch("""
+            SELECT t1.user_id
+            FROM team_members AS t1
+            INNER JOIN team_members AS t2 ON (
+                t2.team_id = t1.team_id AND t2.user_id = $1
+            )
+        """, user_id)
+
     async def create_join_request(self, guild_id: int, team_id: int, user_id: int, reason: str = None) -> bool:
         existing = await self.db.pool.fetchval("""
             SELECT 1 FROM team_join_requests 
