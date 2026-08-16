@@ -10,9 +10,11 @@ class TortoiseBotDeveloperCheckFailure(CheckFailure):
     def __init__(self):
         super().__init__("Can only be used by Tortoise developers.")
 
+
 class TortoiseStaffCheckFailure(CheckFailure):
     def __init__(self):
         super().__init__("Can only be used by Tortoise Staff.")
+
 
 class EndpointResponse(Exception):
     def __init__(self, code: int, message: str):

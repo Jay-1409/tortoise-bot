@@ -13,4 +13,7 @@ exclude =
     env,
     venv,
     dev,
-    test.py
+    test.py,
+    .venv,
+    docs,
+    manager.py

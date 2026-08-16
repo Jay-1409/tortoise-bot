@@ -20,9 +20,11 @@ console = logging.StreamHandler(stdout)
 console.setFormatter(formatter)
 console_logger.addHandler(console)
 
+
 def main():
     console_logger.info("Loading and starting the bot..")
     Bot().run(config("BOT_TOKEN"))
+
 
 if __name__ == "__main__":
     main()

@@ -33,6 +33,7 @@ view.add_item(
     )
 )
 
+
 class SandboxExec(commands.Cog):
     runtime_group = app_commands.Group(
         name="runtime", description="Manage runtime functions", guild_ids=[tortoise_guild_id]
@@ -47,7 +48,6 @@ class SandboxExec(commands.Cog):
 
     def cog_unload(self):
         self.bot.loop.create_task(self.session.close())
-
 
     def _parse_block(self, content: str):
         if not content.startswith("/run"):
@@ -70,7 +70,6 @@ class SandboxExec(commands.Cog):
             return lang, code
         except Exception:
             return None
-
 
     async def _execute(self, language: str, code: str):
         payload = {
@@ -105,7 +104,6 @@ class SandboxExec(commands.Cog):
                 }
 
             return await resp.json()
-
 
     def _build_output(self, result: dict):
         exit_code = result.get("code")
@@ -145,7 +143,10 @@ class SandboxExec(commands.Cog):
             space_req = max(0, 99 - len(time_text))
             spacer = "\u0020" * space_req
 
-            embed.set_footer(text=f"{time_text}{spacer}Powered by Hermes Engine", icon_url=f"https://lairesit.sirv.com/Tortoise/{language}.png")
+            embed.set_footer(
+                text=f"{time_text}{spacer}Powered by Hermes Engine",
+                icon_url=f"https://lairesit.sirv.com/Tortoise/{language}.png"
+            )
 
         if target_message:
             await target_message.edit(embed=embed)
@@ -157,7 +158,6 @@ class SandboxExec(commands.Cog):
                 link_view = view
                 self.last_link_time = datetime.now()
             return await channel.send(embed=embed, view=link_view)
-
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -176,7 +176,9 @@ class SandboxExec(commands.Cog):
 
         if not lang:
             await message.channel.send(
-               embed=failure("Unsupported language. Use `python`, `javascript`, `java` or `cpp` in the code block header.")
+               embed=failure(
+                   "Unsupported language. Use `python`, `javascript`, `java` or `cpp` in the code block header."
+               )
             )
             return
 

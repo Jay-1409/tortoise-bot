@@ -6,6 +6,7 @@ from bot.utils.exceptions import (TortoiseStaffCheckFailure,
                                   TortoiseGuildCheckFailure,
                                   TortoiseBotDeveloperCheckFailure)
 
+
 class TortoiseCommandTree(app_commands.CommandTree):
 
     async def on_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):

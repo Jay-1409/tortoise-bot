@@ -22,6 +22,7 @@ appeal_view.add_item(
     )
 )
 
+
 class AntiRaidSpam(commands.Cog):
     """
     Bans users who spam messages across multiple channels or fail pre-join bot traps.
@@ -39,14 +40,12 @@ class AntiRaidSpam(commands.Cog):
     CHANNEL_THRESHOLD = 3
     MAX_LOG_SIZE = 100
 
-
     def __init__(self, bot):
         self.bot = bot
         # guild_id -> member_id -> deque[(ts, channel_id, content, message_id)]
         self.message_log = defaultdict(lambda: defaultdict(deque))
         self._log_channel = None
         self._mod_log_channel = None
-
 
     @property
     def log_channel(self) -> discord.TextChannel:
@@ -59,7 +58,6 @@ class AntiRaidSpam(commands.Cog):
         if self._mod_log_channel is None:
             self._mod_log_channel = self.bot.get_channel(deterrence_log_channel_id)
         return self._mod_log_channel
-
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
@@ -107,7 +105,6 @@ class AntiRaidSpam(commands.Cog):
             self.message_log[guild.id].pop(member.id, None)
             return
 
-
         has_new_role = any(r.id == new_member_role_id for r in member.roles)
         multi_attachments = len(message.attachments) > 1
 
@@ -137,7 +134,6 @@ class AntiRaidSpam(commands.Cog):
         if len(unique_channels) >= self.CHANNEL_THRESHOLD and repetitive:
             await self.handle_raid(member, list(logs))
             self.message_log[guild.id].pop(member.id, None)
-
 
     def _extract_message_content(self, message: discord.Message) -> str:
         parts: list[str] = []
@@ -204,7 +200,6 @@ class AntiRaidSpam(commands.Cog):
             return
 
         await self.log_to_mod_channel(guild, member, logs)
-
 
     async def send_dm_notice(self, member: discord.Member, guild: discord.Guild):
         embed = simple_embed(

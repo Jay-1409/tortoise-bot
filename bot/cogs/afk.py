@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from bot.bot import Bot
 
+
 class AFK(commands.Cog):
     def __init__(self, bot: "Bot") -> None:
         self.bot = bot
@@ -68,7 +69,6 @@ class AFK(commands.Cog):
         )
 
         await self.bot.sys_log_channel.send(embed=log_embed)
-
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -146,10 +146,10 @@ class AFK(commands.Cog):
             if user:
                 await self.bot.safe_send(user, embed=success("You are no longer AFK"))
 
-
     @cleanup_expired.before_loop
     async def before_cleanup(self):
         await self.bot.wait_until_ready()
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AFK(bot))

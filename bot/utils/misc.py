@@ -177,5 +177,6 @@ def get_utc_time_until(
     else:
         return format_timedelta(difference)
 
+
 def get_user_avatar(user: discord.Member) -> str:
     return user.avatar.url if user.avatar else constants.default_avatar_url

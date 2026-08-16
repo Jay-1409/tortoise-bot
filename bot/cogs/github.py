@@ -80,6 +80,7 @@ STATIC_PROJECTS_DATA = [
     },
 ]
 
+
 class Project:
     def __init__(self, project_data: dict):
         self.name = project_data["name"]
@@ -98,7 +99,6 @@ class Github(commands.Cog):
         self.projects = {}
         self._load_static()
         self.update_static_projects.start()
-
 
     def _load_static(self):
         try:
@@ -176,7 +176,6 @@ class Github(commands.Cog):
     @app_commands.command(name="git", description="Alias for /github")
     async def git(self, interaction: discord.Interaction):
         await self._github_handler(interaction)
-
 
 
 async def setup(bot):

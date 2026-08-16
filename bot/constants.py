@@ -13,6 +13,7 @@ github_repo_link = "https://github.com/Tortoise-Community/Tortoise-BOT"
 line_img_url = "https://www.animatedimages.org/data/media/562/animated-line-image-0015.gif"
 infraction_img_url = "https://www.animatedimages.org/data/media/562/animated-line-image-0538.gif"
 banner_url = "https://lairesit.sirv.com/Tortoise/banner.jpg"
+info_banner_url = "https://lairesit.sirv.com/Tortoise/tortoise-info.jpg"
 github_repo_stats_endpoint = "https://api.github.com/repos/Tortoise-Community/"
 project_url = "https://www.tyxc.org/projects/"
 events_url = "https://www.tyxc.org/events/"
@@ -42,11 +43,18 @@ code_submissions_log_channel_id = bot_log_channel_id
 
 bot_dev_channel_id = 692851221223964822
 general_channel_id = 577192344533598472
+today_i_did_channel_id = 1527705624073474169
+resume_roasting_channel = 1507008205232935122
 staff_channel_id = 580809054067097600
+rules_channel_id = 738986778396196935
 
-#Tortoise Guild channels
+# Tortoise Guild channels
 leetcode_channel_id = 726403782740541470
+programming_channel_id = 577195845376802826
+opensource_channel_id = 581483558410125372
+discussion_voice_channel_id = 1457383811406102762
 bot_cmd_channel_id = 581726653710073858
+focus_music_channel_id = 1515440479636820169
 project_showcase_channel_id = 581156991557304330
 resources_channel_id = 577195878620725251
 challenge_submission_channel_id = 780842875901575228
@@ -56,6 +64,17 @@ challenge_logs_public_channel_id = 1524682332005728257
 bait_channel_id = 1461666781612740750
 introduction_channel_id = 1487413734056923236
 join_a_team_channel_id = 1489264049983197246
+
+# Team channels
+team_plan_channel_id = 1498315759506686115
+team_forum_channel_id = 1498316149035896874
+team_chat_channel_id = 1497109933001543740
+team_discussion_channel_id = 1506559418555174932
+team_voice_channel_id = 1497109934029144074
+
+# Marketplace channels
+job_board_channel_id = 1472363495608815852
+dev_board_channel_id = 1472363116296933448
 
 # Ban Appeal Channels
 ban_appeal_channel_id = 1464188530396893336
@@ -86,11 +105,15 @@ apprentice_role_id = 1472725760723648522
 fellow_role_id = 1472793939630358731
 elite_role_id = 1515787455184240722
 
+rules_emoji_id = 1534128065104576522
+roles_emoji_id = 1534127242081206322
+channels_emoji_id = 1534124243640385536
+
 mod_mail_ping_role_id = 1493890424518086807
 bot_trap_role_id = 1505158956811685908
 
 promotable_roles = {
-    wizard_role_id: "You are currently **#1 on the Challenges Leaderboard**, placing you at the top "
+    wizard_role_id:      "You are currently **#1 on the Challenges Leaderboard**, placing you at the top "
                          "of the server's competitive coding ranks.\n\n"
                          "This is the **highest non-staff role** and represents exceptional skill, "
                          "consistency, and mastery in solving challenges.\n\n"
@@ -98,7 +121,8 @@ promotable_roles = {
 
     trusted_role_id:  "This role is given to members who have been part of the community for a long "
                          "time and have consistently shown they can be trusted.\n\n"
-                         "This is the **2nd highest non-staff role** and it's exempt from certain auto-mod restrictions.\n\n"
+                         "This is the **2nd highest non-staff role** and it's exempt "
+                      "from certain auto-mod restrictions.\n\n"
                          "Thank you for being a reliable and respected member of the community.",
 
     contributor_role_id:  "This role recognizes members who actively contribute to our **GitHub repositories** "
@@ -113,8 +137,8 @@ promotable_roles = {
                           "Do well during this period, make fair decisions, and help the community "
                           "and you can be promoted to **Moderator**.\n\n"
                           "Take initiative, be approachable, and set a good example.",
-    elite_role_id:        "This role is given to appreciate and honor the **most experienced person on this server**.\n\n"
-                          "This is now the **highest non-staff role** and stands as a testament to your exceptional "
+    elite_role_id:        "This role is given to appreciate and honor the **most experienced person on this server**.\n"
+                          "\nThis is now the **highest non-staff role** and stands as a testament to your exceptional "
                           "real-world expertise, seasoned perspective, and industry background.\n\n"
                           "We are incredibly grateful to have you in our community."
 
@@ -171,7 +195,8 @@ automatically_assigned_roles = {
         "🚨 EMERGENCY EVENT DETECTED 🚨\n"
         "You have unlocked the final hidden evolution: **Needs to Touch Grass**.\n"
         "The server database is begging you to close Discord. The turtles are worried.\n"
-        "Please step outside, locate a photosynthetic plant organism, and make physical skin contact with it immediately.\n\n"
+        "Please step outside, locate a photosynthetic plant organism, "
+        "and make physical skin contact with it immediately.\n\n"
         "Next milestone: **Seriously, go outside.**"
     )
 }
@@ -331,6 +356,7 @@ class Infraction(Enum):
     ban = Color.red()
     timeout = Color.orange()
 
+
 # These are allowed and will not get auto-deleted by bot nor will they get a paste link.
 allowed_file_extensions = (
     # Audio
@@ -443,17 +469,82 @@ RULES = {
     },
 }
 
+
 introduction_format = """
 ```
 Name / Nickname:
 Location:
 What you do:
-Interests: 
+Interests:
 Hobbies:
 What you’re looking for here:
 Fun fact (optional):
 ```
 """
 
-if config("DEVELOPMENT_MODE", cast=bool, default=False):
-    from dev.constants import * #noqa
+
+DEVELOPMENT_MODE = config("DEVELOPMENT_MODE", cast=bool, default=False)
+
+if DEVELOPMENT_MODE:
+    from dev.constants import * # noqa
+
+channel_description_info = (
+    "- 🌟 **Getting Started**\n"
+    f"  - **<#{introduction_channel_id}>**: Introduce yourself here, so like minded people can find you.\n"
+    f"  - **<#{join_a_team_channel_id}>**: Join a DSA team, view all teams using the channel utility.\n\n"
+    "- 💭 **General**\n"
+    f"  - **<#{general_channel_id}>**: Casual conversations and main community chat.\n"
+    f"  - **<#{today_i_did_channel_id}>**: Log your daily progress or anything productive you did that day.\n"
+    f"  - **<#{resume_roasting_channel}>**: Post your resume here and get roasted!\n"
+    f"  - **<#{project_showcase_channel_id}>**: Showcase your project here that you are really proud of.\n"
+    f"  - **<#{bot_cmd_channel_id}>**: Use all bots and bot commands here, both Tortoise and Runtime.\n"
+    f"  - **<#{focus_music_channel_id}>**: Listen to lo-fi beats and focus music 24/7 365.\n\n"
+    "- ❓ **Help & discussion**\n"
+    f"  - **<#{leetcode_channel_id}>**: All discussions related to Leetcode/DS-Algo and Competitive Programming.\n"
+    f"  - **<#{programming_channel_id}>**: General programming discussions, All languages welcome.\n"
+    f"  - **<#{opensource_channel_id}>**: Discussions about opensource projects, Homelab and Self-hosting.\n"
+    f"  - **<#{discussion_voice_channel_id}>**: Common voice channel for all topics.\n\n"
+    "- 👨‍💻 **Leetcode challenges**\n"
+    f"  - **<#{challenges_channel_id}>**: Weekly Leetcode Challenge will be posted here!\n"
+    f"  - **<#{challenge_log_channel_id}>**: Challenge auto-submission logs will be visible here.\n"
+    f"  - **<#{challenge_submission_channel_id}>**: Post your challenge solutions here so others can refer it.\n"
+    f"  - **<#{challenge_discussion_channel_id}>**: Discussion related to current or previous challenges.\n\n"
+    "- 🎓 **DSA Prep Team - Tortoise**\n"
+    f"  - **<#{team_plan_channel_id}>**: Weekly team plan posted here with list of problems for you to solve daily.\n"
+    f"  - **<#{team_forum_channel_id}>**: Post your daily solutions in the designated forum channels.\n"
+    f"  - **<#{team_chat_channel_id}>**: All casual conversation with team members happens here.\n"
+    f"  - **<#{team_discussion_channel_id}>**: Discussions related to daily problems, approaches and patterns.\n"
+    f"  - **<#{team_voice_channel_id}>**: Common voice channel for all team activity.\n\n"
+    "- 💳 **Developer Marketplace**\n"
+    f"  - **<#{job_board_channel_id}>**: Use this channel for posting job/paid work requests.\n"
+    f"  - **<#{dev_board_channel_id}>**: Use this channel if you are a developer / service provider "
+    f"who want's to advertise their service. \n\n"
+)
+
+
+role_description_info = (
+    "# Server Roles\n"
+    "Roles in this server recognize activity, contribution, and trust within the community. "
+    "Some roles are earned automatically through participation, some are awarded through "
+    "community nominations, and a few are granted directly for special achievements.\n\n"
+
+    "## Activity Roles\n"
+    "Earn these automatically by being active in chat.\n"
+    f"- <@&{active_role_id}>: marks you as an active community member.\n"
+    f"- <@&{active_plus_role_id}>: Shows consistent participation in discussions.\n"
+    f"- <@&{chronically_online_role_id}>: Your message count has breached the event horizon.\n"
+    f"- <@&{needs_to_touch_grass_role_id}>: The final hidden evolution. Please step outside.\n\n"
+
+    "## Community Progression Roles\n"
+    "Awarded through community nominations (`/nominate`).\n"
+    f"- <@&{boot_role_id}> 👦🏻: **Boot** - Requires <@&{active_role_id}>. "
+    f"Nominated by 2 Apprentices, 1 Fellow, or 1 Mod.\n"
+    f"- <@&{apprentice_role_id}> 👨‍💻: **Apprentice** - Requires Boot. Nominated by 2 Fellows or 1 Mod.\n"
+    f"- <@&{fellow_role_id}> 👨🏻‍🎓: **Fellow** - Requires Apprentice. Nominated by 2 Mods.\n\n"
+
+    "## Special Recognition Roles\n"
+    "Awarded directly by staff for notable achievements.\n"
+    f"- <@&{wizard_role_id}> ⚡︎: Awarded to the member currently #1 on the challenges leaderboard.\n"
+    f"- <@&{trusted_role_id}> ✔: Given to long-standing members demonstrating reliability.\n"
+    f"- <@&{contributor_role_id}> 🛠️: Recognizes contributions to our GitHub repositories."
+)

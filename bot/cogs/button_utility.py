@@ -11,11 +11,16 @@ from bot.constants import (
 from bot.utils.checks import tortoise_bot_developer_only
 from bot.utils.embed_handler import info, failure, success
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bot.cogs.tortoise_dm import TortoiseDM
+
 
 class TicketReasonSelect(discord.ui.Select):
     """Dropdown menu for selecting the ticket/ban appeal reason."""
 
-    def __init__(self, cog: "TortoiseDM"):
+    def __init__(self, cog: TortoiseDM):
         options = [
             discord.SelectOption(
                 label="Accidentally Selected 'I am Bot' Option",
@@ -97,7 +102,10 @@ class TicketReasonSelect(discord.ui.Select):
                                                                           guild_id=tortoise_guild_id,
                                                                           status=False)
 
-                    await interaction.followup.send(f"✅ Successfully unbanned. You may rejoin!\n\n{server_link}", ephemeral=True)
+                    await interaction.followup.send(
+                        f"✅ Successfully unbanned. You may rejoin!\n\n{server_link}",
+                        ephemeral=True
+                    )
 
                 except discord.NotFound:
                     await interaction.followup.send("You are not currently recorded on the server ban list.",
@@ -108,7 +116,8 @@ class TicketReasonSelect(discord.ui.Select):
             else:
                 await interaction.followup.send(
                     embed=failure(
-                        "Our records indicate you weren't banned by the automated bot trap.\nPlease select a different appeal reason."),
+                        "Our records indicate you weren't banned by the automated bot trap."
+                        "\nPlease select a different appeal reason."),
                     ephemeral=True
                 )
 
@@ -183,6 +192,7 @@ class ModMailStartView(discord.ui.View):
             view=TicketReasonView(cog),
             ephemeral=True
         )
+
 
 class NotifyButton(discord.ui.View):
     """Persistent button view for challenge notifications."""
@@ -291,7 +301,6 @@ class ButtonUtility(commands.Cog):
         self.bot.add_view(ModMailStartView())
         self.bot.add_view(TeamInvitesButton())
 
-
     @app_commands.command(
         name="post_challenge_notification",
         description="Post the challenge notification opt-in message.",
@@ -315,7 +324,6 @@ class ButtonUtility(commands.Cog):
             embed=embed,
             view=NotifyButton(),
         )
-
 
     @app_commands.command(
         name="post_modmail_panel",
@@ -363,7 +371,8 @@ class ButtonUtility(commands.Cog):
             title="Receive Team Invites",
             description=(
                 "Click here to receive team invites from team leads.\n\n"
-                "Teams are designed for focused DSA preparation with like-minded people, preferably in the same timezone.\n"
+                "Teams are designed for focused DSA preparation with like-minded people, "
+                "preferably in the same timezone.\n"
                 "This may include organized group calls, discussions, and collaboration.\n\n"
                 f"**All Teams: **: https://discord.com/channels/"
                 f"{tortoise_guild_id}/{join_a_team_channel_id}/{teams_dashboard_message_id}\n\n"
@@ -377,6 +386,7 @@ class ButtonUtility(commands.Cog):
             embed=embed,
             view=TeamInvitesButton(),
         )
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ButtonUtility(bot))

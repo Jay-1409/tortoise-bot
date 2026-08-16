@@ -4,7 +4,7 @@ from typing import Union
 import discord
 from asyncpraw import models
 
-from discord import Embed, Color, Member, User, Message, TextChannel, ClientUser
+from discord import Embed, Color, Member, User, ClientUser
 
 from bot import constants
 from bot.utils.custom_types import FakeInteraction
@@ -58,9 +58,10 @@ def goodbye(member: discord.Member, message: str = None) -> Embed:
     :return: Embed object
     """
     message = message or f"{member} has left {member.guild.name}."
-    embed =  simple_embed(message, "Member Left ➖", color=Color.dark_red())
+    embed = simple_embed(message, "Member Left ➖", color=Color.dark_red())
     embed.set_footer(text=f"ID: {member.id}", icon_url=get_user_avatar(member))
     return embed
+
 
 async def nsfw_warning_embed(author: Member, additional_msg: str = "") -> Embed:
     """
@@ -109,7 +110,7 @@ async def reddit_embed(ctx, submission: models.Submission, color=0x3498d) -> Emb
     return embed
 
 
-def info(message: str, member: Union[Member, User, ClientUser], title: str = "Info", footer_text = None) -> Embed:
+def info(message: str, member: Union[Member, User, ClientUser], title: str = "Info", footer_text=None) -> Embed:
     """
     Constructs success embed with custom title and description.
     Color depends on passed member top role color.
@@ -119,7 +120,7 @@ def info(message: str, member: Union[Member, User, ClientUser], title: str = "In
     :param footer_text: footer text, defaults to None
     :return: Embed object
     """
-    embed =  Embed(title=title, description=message, color=get_top_role_color(member, fallback_color=Color.green()))
+    embed = Embed(title=title, description=message, color=get_top_role_color(member, fallback_color=Color.green()))
     if footer_text:
         embed.set_footer(text=footer_text)
     return embed
@@ -284,6 +285,7 @@ def project_embed(projects: dict, me):
 
     return embed
 
+
 def moderation_log_embed(
     *,
     title: str,
@@ -296,7 +298,9 @@ def moderation_log_embed(
     embed.add_field(name="Content", value=content[:1024], inline=False)
     return embed
 
-def code_eval_embed(language: str, output: str, *, edited: bool = False, exit_code: int = -1, disable_extras=False) -> Embed:
+
+def code_eval_embed(language: str, output: str, *,
+                    edited: bool = False, exit_code: int = -1, disable_extras=False) -> Embed:
     title = "Execution Result (edited)" if edited else "Execution Result"
     color = (Color.dark_red() if exit_code != 0 else Color.green() if edited else Color.dark_green())
 
@@ -327,7 +331,8 @@ def build_rules_embed(user: discord.ClientUser):
             "**Guidelines:**\n"
             "- Start with a brute force approach if needed, then optimize for time and space complexity.\n"
             "- Do not use AI assistance.\n"
-            f"- Discussions are allowed in <#{constants.challenge_discussion_channel_id}>, but do not share full solutions.\n"
+            f"- Discussions are allowed in <#{constants.challenge_discussion_channel_id}>, "
+            f"but do not share full solutions.\n"
             "- Any programming language is allowed.\n\n"
             "**Complexity Target:**\n"
             "- Aim for O(N) time and O(N) space or the best achievable complexity.\n"
