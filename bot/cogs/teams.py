@@ -761,12 +761,12 @@ class TeamCog(commands.Cog):
         try:
             member_id = int(member)
         except ValueError:
-            return await interaction.response.send_message("Invalid user ID")
+            return await interaction.response.send_message(embed=failure("Invalid user ID"))
 
-        guild_member = interaction.guild.get_member(member_id)
+        guild_member = guild.get_member(member_id)
 
         if not guild_member:
-            return await interaction.response.send_message("User not found")
+            return await interaction.response.send_message(embed=failure("User not found"))
 
         team = await self.team.get_team_by_leader(guild.id, interaction.user.id)
 
