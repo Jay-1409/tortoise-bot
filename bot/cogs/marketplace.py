@@ -29,10 +29,11 @@ class MarketplaceCog(commands.Cog):
 
         if forum_channel and forum_channel.type == ChannelType.forum:
             if forum_channel.id == job_board_channel_id:
-                await thread.send(embed = embed)
+                await thread.send(embed=embed)
 
             if forum_channel.id == dev_board_channel_id:
-                await thread.send(embed = embed)
+                await thread.send(embed=embed)
+
 
 async def setup(bot):
     await bot.add_cog(MarketplaceCog(bot))

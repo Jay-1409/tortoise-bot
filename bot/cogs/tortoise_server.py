@@ -331,31 +331,7 @@ class TortoiseServer(commands.Cog):
 
         elif custom_id == "Roles":
             roles_embed = discord.Embed(
-                description=(
-                    "# Server Roles\n"
-                    "Roles in this server recognize activity, contribution, and trust within the community. "
-                    "Some roles are earned automatically through participation, some are awarded through "
-                    "community nominations, and a few are granted directly for special achievements.\n\n"
-
-                    "## Activity Roles\n"
-                    "Earn these automatically by being active in chat.\n"
-                    f"- <@&{constants.active_role_id}>: marks you as an active community member.\n"
-                    f"- <@&{constants.active_plus_role_id}>: Shows consistent participation in discussions.\n"
-                    f"- <@&{constants.chronically_online_role_id}>: Your message count has breached the event horizon.\n"
-                    f"- <@&{constants.needs_to_touch_grass_role_id}>: The final hidden evolution. Please step outside.\n\n"
-
-                    "## Community Progression Roles\n"
-                    "Awarded through community nominations (`/nominate`).\n"
-                    f"- <@&{constants.boot_role_id}> 👦🏻: **Boot** - Requires <@&{constants.active_role_id}>. Nominated by 2 Apprentices, 1 Fellow, or 1 Mod.\n"
-                    f"- <@&{constants.apprentice_role_id}> 👨‍💻: **Apprentice** - Requires Boot. Nominated by 2 Fellows or 1 Mod.\n"
-                    f"- <@&{constants.fellow_role_id}> 👨🏻‍🎓: **Fellow** - Requires Apprentice. Nominated by 2 Mods.\n\n"
-
-                    "## Special Recognition Roles\n"
-                    "Awarded directly by staff for notable achievements.\n"
-                    f"- <@&{constants.wizard_role_id}> ⚡︎: Awarded to the member currently #1 on the challenges leaderboard.\n"
-                    f"- <@&{constants.trusted_role_id}> ✔: Given to long-standing members demonstrating reliability.\n"
-                    f"- <@&{constants.contributor_role_id}> 🛠️: Recognizes contributions to our GitHub repositories."
-                ),
+                description=constants.role_description_info,
                 color=constants.default_color,
             )
 
@@ -366,40 +342,13 @@ class TortoiseServer(commands.Cog):
 
         elif custom_id == "Channels":
             channels_embed = discord.Embed(
-                description=(
-                    "- 🌟 **Getting Started**\n"
-                    f"  - **<#{constants.introduction_channel_id}>**: Introduce yourself here, so like minded people can find you.\n"
-                    f"  - **<#{constants.join_a_team_channel_id}>**: Join a DSA team, view all teams using the channel utility.\n\n"
-                    "- 💭 **General**\n"
-                    f"  - **<#{constants.general_channel_id}>**: Casual conversations and main community chat.\n"
-                    f"  - **<#{constants.today_i_did_channel_id}>**: Log your daily progress or anything productive you did that day.\n"
-                    f"  - **<#{constants.resume_roasting_channel}>**: Post your resume here and get roasted!\n"
-                    f"  - **<#{constants.project_showcase_channel_id}>**: Showcase your project here that you are really proud of.\n"
-                    f"  - **<#{constants.bot_cmd_channel_id}>**: Use all bots and bot commands here, both Tortoise and Runtime.\n"
-                    f"  - **<#{constants.focus_music_channel_id}>**: Listen to lo-fi beats and focus music 24/7 365.\n\n"
-                    "- ❓ **Help & discussion**\n"
-                    f"  - **<#{constants.leetcode_channel_id}>**: All discussions related to Leetcode/DS-Algo and Competitive Programming.\n"
-                    f"  - **<#{constants.programming_channel_id}>**: General programming discussions, All languages welcome.\n"
-                    f"  - **<#{constants.opensource_channel_id}>**: Discussions about opensource projects, Homelab and Self-hosting.\n"
-                    f"  - **<#{constants.discussion_voice_channel_id}>**: Common voice channel for all topics.\n\n"
-                    "- 👨‍💻 **Leetcode challenges**\n"
-                    f"  - **<#{constants.challenges_channel_id}>**: Weekly Leetcode Challenge will be posted here!\n"
-                    f"  - **<#{constants.challenge_log_channel_id}>**: Challenge auto-submission logs will be visible here.\n"
-                    f"  - **<#{constants.challenge_submission_channel_id}>**: Post your challenge solutions here so others can refer it.\n"
-                    f"  - **<#{constants.challenge_discussion_channel_id}>**: Discussion related to current or previous challenges.\n\n"
-                    "- 🎓 **DSA Prep Team - Tortoise**\n"
-                    f"  - **<#{constants.team_plan_channel_id}>**: Weekly team plan will be posted with list of problems for you to solve daily.\n"
-                    f"  - **<#{constants.team_forum_channel_id}>**: Post your daily solutions in the designated forum channels.\n"
-                    f"  - **<#{constants.team_chat_channel_id}>**: All casual conversation with team members happens here.\n"
-                    f"  - **<#{constants.team_discussion_channel_id}>**: Discussions related to daily problems, approaches and patterns.\n"
-                    f"  - **<#{constants.team_voice_channel_id}>**: Common voice channel for all team activity.\n\n"
-                    "- 💳 **Developer Marketplace**\n"
-                    f"  - **<#{constants.job_board_channel_id}>**: Use this channel for posting job/paid work requests.\n"
-                    f"  - **<#{constants.dev_board_channel_id}>**: Use this channel if you are a developer / service provider who want's to advertise their service. \n\n"
-                ),
+                description=constants.channel_description_info,
                 color=constants.default_color,
             )
-            channels_embed.set_footer(icon_url=constants.bot_avatar_url, text="Enable “Show All Channels” in server settings if some channels are not visible.")
+            channels_embed.set_footer(
+                icon_url=constants.bot_avatar_url,
+                text="Enable “Show All Channels” in server settings if some channels are not visible."
+            )
 
             await interaction.response.send_message(
                 embed=channels_embed,

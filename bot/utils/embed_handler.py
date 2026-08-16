@@ -3,7 +3,6 @@ from typing import Union
 
 import discord
 from asyncpraw import models
-from bot import constants
 
 from discord import Embed, Color, Member, User, ClientUser
 
