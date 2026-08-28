@@ -112,6 +112,7 @@ class Miscellaneous(commands.Cog):
     @app_commands.choices(name=[
         app_commands.Choice(name="Ask", value="ask"),
         app_commands.Choice(name="Markdown", value="markdown"),
+        app_commands.Choice(name="Spoiler", value="spoiler"),
         app_commands.Choice(name="Run Help", value="run_help"),
         app_commands.Choice(name="Zen", value="zen"),
         app_commands.Choice(name="Add to Issues", value="add_to_issues")
@@ -148,6 +149,26 @@ class Miscellaneous(commands.Cog):
                 "Note: The character ` is not a quote but a backtick."
             )
             embed.set_image(url="https://lairesit.sirv.com/Tortoise/howto.gif")
+            await interaction.response.send_message(embed=embed)
+            message = await interaction.original_response()
+            await RemovableMessage.create_instance(self.bot, message, interaction.user)
+
+        elif value == "spoiler":
+            content = (
+                "You can hide your code by applying spoiler tags like this:\n\n"
+                "\\|\\|\n\\`\\`\\`python\n"
+                "print('Hello world')\n"
+                "\\`\\`\\`\\|\\|\n\n"
+                "This would give you:\n"
+                "||```python\n"
+                "print('Hello world')```||\n"
+                "**Video explanation:**\n"
+            )
+            embed = info(
+                content, interaction.guild.me, "",
+                "Note: The character | is the pipe operator."
+            )
+            embed.set_image(url="https://lairesit.sirv.com/Tortoise/howtoapplyspoiler.gif")
             await interaction.response.send_message(embed=embed)
             message = await interaction.original_response()
             await RemovableMessage.create_instance(self.bot, message, interaction.user)
