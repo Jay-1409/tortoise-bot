@@ -222,6 +222,22 @@ Each boilerplate must contain:
 
 The bot replaces that marker with the submitted function.
 
+#### `/challenge add-bulk`
+
+Creates or updates a coding problem from one message containing all seven files.
+
+Run `/challenge add-bulk`, provide the title, then attach these exact filenames to your next message in the channel:
+
+- `statement.md`
+- `python-boilerplate.py`
+- `javascript-boilerplate.js`
+- `cpp-boilerplate.cpp`
+- `java-boilerplate.java`
+- `test-inputs.json`
+- `expected-outputs.json`
+
+The bot matches each file by name and applies the same validation as `/challenge add`. The upload expires after three minutes.
+
 #### `/challenge remove`
 
 Deactivates a problem.

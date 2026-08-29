@@ -31,9 +31,11 @@ from bot.constants import (
 )
 from bot.utils.checks import check_if_tortoise_staff
 from bot.utils.challenge import (
+    CHALLENGE_ATTACHMENT_FILENAMES,
     ExecutionApiClient,
     Problem,
     TestCase,
+    arrange_challenge_attachments,
     clean_slug,
     download_text,
     judge_submission,
@@ -382,33 +384,18 @@ class Challenges(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            problem_statement = await download_text(statement, max_bytes=challenge_statement_max_bytes)
-            if not problem_statement.strip():
-                raise ValueError("problem statement cannot be empty.")
-
-            boilerplates = {
-                "python": await download_text(python_boilerplate, max_bytes=challenge_boilerplate_max_bytes),
-                "javascript": await download_text(javascript_boilerplate, max_bytes=challenge_boilerplate_max_bytes),
-                "cpp": await download_text(cpp_boilerplate, max_bytes=challenge_boilerplate_max_bytes),
-                "java": await download_text(java_boilerplate, max_bytes=challenge_boilerplate_max_bytes),
-            }
-            for language, boilerplate in boilerplates.items():
-                if "{{SOLUTION}}" not in boilerplate:
-                    raise ValueError(f"{language} boilerplate must contain a {{SOLUTION}} marker.")
-
-            inputs_text = await download_text(test_inputs, max_bytes=challenge_tests_max_bytes)
-            outputs_text = await download_text(expected_outputs, max_bytes=challenge_tests_max_bytes)
-            tests = parse_test_files(inputs_text, outputs_text, self.max_tests)
-
-            slug = slug_from_title(str(title))
-            await self.challenge_manager.upsert_problem(
-                guild_id=interaction.guild_id,
-                slug=slug,
-                title=str(title),
-                statement=problem_statement,
-                boilerplates=boilerplates,
-                tests=tests,
-                created_by=interaction.user.id,
+            tests = await self._save_problem(
+                interaction,
+                str(title),
+                {
+                    "statement.md": statement,
+                    "python-boilerplate.py": python_boilerplate,
+                    "javascript-boilerplate.js": javascript_boilerplate,
+                    "cpp-boilerplate.cpp": cpp_boilerplate,
+                    "java-boilerplate.java": java_boilerplate,
+                    "test-inputs.json": test_inputs,
+                    "expected-outputs.json": expected_outputs,
+                },
             )
         except Exception as exc:
             logger.exception("Could not add challenge problem")
@@ -422,6 +409,98 @@ class Challenges(commands.Cog):
             ),
             ephemeral=True,
         )
+
+    @challenge_group.command(name="add-bulk", description="Create or update a problem from one multi-file upload.")
+    @app_commands.check(check_if_tortoise_staff)
+    @app_commands.describe(title="Problem title.")
+    async def challenge_add_bulk(
+        self,
+        interaction: discord.Interaction,
+        title: app_commands.Range[str, challenge_problem_title_min_length, challenge_problem_title_max_length],
+    ):
+        filenames = "\n".join(f"`{name}`" for name in CHALLENGE_ATTACHMENT_FILENAMES)
+        await interaction.response.send_message(
+            embed=info(
+                "Send one message in this channel with these seven files attached:\n\n"
+                f"{filenames}\n\nThis upload expires in 3 minutes.",
+                interaction.user,
+            ),
+            ephemeral=True,
+        )
+
+        def is_upload(message: discord.Message) -> bool:
+            return (
+                message.author.id == interaction.user.id
+                and message.channel.id == interaction.channel_id
+                and message.guild is not None
+                and message.guild.id == interaction.guild_id
+            )
+
+        try:
+            message = await self.bot.wait_for("message", check=is_upload, timeout=180)
+            attachments = arrange_challenge_attachments(message.attachments)
+            tests = await self._save_problem(interaction, str(title), attachments)
+        except TimeoutError:
+            await interaction.followup.send(embed=warning("Bulk challenge upload timed out."), ephemeral=True)
+            return
+        except Exception as exc:
+            logger.exception("Could not add challenge problem in bulk")
+            await interaction.followup.send(embed=failure(f"Could not save problem: {exc}"), ephemeral=True)
+            return
+
+        await interaction.followup.send(
+            embed=success(
+                f"Saved **{title}** for Python, JavaScript, C++, and Java "
+                f"with **{len(tests)}** hidden test(s). A full pass awards **{challenge_default_points} points**."
+            ),
+            ephemeral=True,
+        )
+
+    async def _save_problem(
+        self,
+        interaction: discord.Interaction,
+        title: str,
+        attachments: dict[str, discord.Attachment],
+    ) -> list[TestCase]:
+        problem_statement = await download_text(
+            attachments["statement.md"], max_bytes=challenge_statement_max_bytes
+        )
+        if not problem_statement.strip():
+            raise ValueError("problem statement cannot be empty.")
+
+        boilerplates = {
+            "python": await download_text(
+                attachments["python-boilerplate.py"], max_bytes=challenge_boilerplate_max_bytes
+            ),
+            "javascript": await download_text(
+                attachments["javascript-boilerplate.js"], max_bytes=challenge_boilerplate_max_bytes
+            ),
+            "cpp": await download_text(
+                attachments["cpp-boilerplate.cpp"], max_bytes=challenge_boilerplate_max_bytes
+            ),
+            "java": await download_text(
+                attachments["java-boilerplate.java"], max_bytes=challenge_boilerplate_max_bytes
+            ),
+        }
+        for language, boilerplate in boilerplates.items():
+            if "{{SOLUTION}}" not in boilerplate:
+                raise ValueError(f"{language} boilerplate must contain a {{SOLUTION}} marker.")
+
+        tests = parse_test_files(
+            await download_text(attachments["test-inputs.json"], max_bytes=challenge_tests_max_bytes),
+            await download_text(attachments["expected-outputs.json"], max_bytes=challenge_tests_max_bytes),
+            self.max_tests,
+        )
+        await self.challenge_manager.upsert_problem(
+            guild_id=interaction.guild_id,
+            slug=slug_from_title(title),
+            title=title,
+            statement=problem_statement,
+            boilerplates=boilerplates,
+            tests=tests,
+            created_by=interaction.user.id,
+        )
+        return tests
 
     @challenge_group.command(name="remove", description="Deactivate a coding problem.")
     @app_commands.check(check_if_tortoise_staff)
