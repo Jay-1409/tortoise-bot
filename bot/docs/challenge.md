@@ -184,13 +184,14 @@ Creates or updates a coding problem.
 | Option | Required | Description |
 |---|---:|---|
 | `title` | Yes | Problem title. |
-| `statement` | Yes | Markdown/text file containing the problem statement. |
-| `python_boilerplate` | Yes | Python starter/driver file containing `{{SOLUTION}}`. |
-| `javascript_boilerplate` | Yes | JavaScript starter/driver file containing `{{SOLUTION}}`. |
-| `cpp_boilerplate` | Yes | C++ starter/driver file containing `{{SOLUTION}}`. |
-| `java_boilerplate` | Yes | Java starter/driver file containing `{{SOLUTION}}`. |
-| `test_inputs` | Yes | JSON array of input strings. |
-| `expected_outputs` | Yes | JSON array of expected output strings. |
+| `bulk` | Yes | Use one follow-up message containing all seven files. |
+| `statement` | When `bulk:false` | Markdown/text file containing the problem statement. |
+| `python_boilerplate` | When `bulk:false` | Python starter/driver file containing `{{SOLUTION}}`. |
+| `javascript_boilerplate` | When `bulk:false` | JavaScript starter/driver file containing `{{SOLUTION}}`. |
+| `cpp_boilerplate` | When `bulk:false` | C++ starter/driver file containing `{{SOLUTION}}`. |
+| `java_boilerplate` | When `bulk:false` | Java starter/driver file containing `{{SOLUTION}}`. |
+| `test_inputs` | When `bulk:false` | JSON array of input strings. |
+| `expected_outputs` | When `bulk:false` | JSON array of expected output strings. |
 
 **Test file format**
 
@@ -222,11 +223,7 @@ Each boilerplate must contain:
 
 The bot replaces that marker with the submitted function.
 
-#### `/challenge add-bulk`
-
-Creates or updates a coding problem from one message containing all seven files.
-
-Run `/challenge add-bulk`, provide the title, then attach these exact filenames to your next message in the channel:
+With `bulk:true`, attach these exact filenames to your next message in the channel:
 
 - `statement.md`
 - `python-boilerplate.py`
@@ -236,7 +233,7 @@ Run `/challenge add-bulk`, provide the title, then attach these exact filenames 
 - `test-inputs.json`
 - `expected-outputs.json`
 
-The bot matches each file by name and applies the same validation as `/challenge add`. The upload expires after three minutes.
+The bot matches each file by name and applies the same validation as manual mode. The upload expires after three minutes.
 
 #### `/challenge remove`
 

@@ -361,6 +361,7 @@ class Challenges(commands.Cog):
     @app_commands.check(check_if_tortoise_staff)
     @app_commands.describe(
         title="Problem title.",
+        bulk="True to upload all seven files in one follow-up message.",
         statement="Markdown/text file containing the full problem statement.",
         python_boilerplate="Python driver/starter file containing {{SOLUTION}}.",
         javascript_boilerplate="JavaScript driver/starter file containing {{SOLUTION}}.",
@@ -373,21 +374,40 @@ class Challenges(commands.Cog):
         self,
         interaction: discord.Interaction,
         title: app_commands.Range[str, challenge_problem_title_min_length, challenge_problem_title_max_length],
-        statement: discord.Attachment,
-        python_boilerplate: discord.Attachment,
-        javascript_boilerplate: discord.Attachment,
-        cpp_boilerplate: discord.Attachment,
-        java_boilerplate: discord.Attachment,
-        test_inputs: discord.Attachment,
-        expected_outputs: discord.Attachment,
+        bulk: bool,
+        statement: Optional[discord.Attachment] = None,
+        python_boilerplate: Optional[discord.Attachment] = None,
+        javascript_boilerplate: Optional[discord.Attachment] = None,
+        cpp_boilerplate: Optional[discord.Attachment] = None,
+        java_boilerplate: Optional[discord.Attachment] = None,
+        test_inputs: Optional[discord.Attachment] = None,
+        expected_outputs: Optional[discord.Attachment] = None,
     ):
-        await interaction.response.defer(ephemeral=True)
-
         try:
-            tests = await self._save_problem(
-                interaction,
-                str(title),
-                {
+            if bulk:
+                filenames = "\n".join(f"`{name}`" for name in CHALLENGE_ATTACHMENT_FILENAMES)
+                await interaction.response.send_message(
+                    embed=info(
+                        "Send one message in this channel with these seven files attached:\n\n"
+                        f"{filenames}\n\nThis upload expires in 3 minutes.",
+                        interaction.user,
+                    ),
+                    ephemeral=True,
+                )
+
+                def is_upload(message: discord.Message) -> bool:
+                    return (
+                        message.author.id == interaction.user.id
+                        and message.channel.id == interaction.channel_id
+                        and message.guild is not None
+                        and message.guild.id == interaction.guild_id
+                    )
+
+                message = await self.bot.wait_for("message", check=is_upload, timeout=180)
+                attachments = arrange_challenge_attachments(message.attachments)
+            else:
+                await interaction.response.defer(ephemeral=True)
+                attachments = {
                     "statement.md": statement,
                     "python-boilerplate.py": python_boilerplate,
                     "javascript-boilerplate.js": javascript_boilerplate,
@@ -395,56 +415,17 @@ class Challenges(commands.Cog):
                     "java-boilerplate.java": java_boilerplate,
                     "test-inputs.json": test_inputs,
                     "expected-outputs.json": expected_outputs,
-                },
-            )
-        except Exception as exc:
-            logger.exception("Could not add challenge problem")
-            await interaction.followup.send(embed=failure(f"Could not save problem: {exc}"), ephemeral=True)
-            return
+                }
+                missing = [name for name, attachment in attachments.items() if attachment is None]
+                if missing:
+                    raise ValueError(f"Manual mode requires: {', '.join(missing)}.")
 
-        await interaction.followup.send(
-            embed=success(
-                f"Saved **{title}** for Python, JavaScript, C++, and Java "
-                f"with **{len(tests)}** hidden test(s). A full pass awards **{challenge_default_points} points**."
-            ),
-            ephemeral=True,
-        )
-
-    @challenge_group.command(name="add-bulk", description="Create or update a problem from one multi-file upload.")
-    @app_commands.check(check_if_tortoise_staff)
-    @app_commands.describe(title="Problem title.")
-    async def challenge_add_bulk(
-        self,
-        interaction: discord.Interaction,
-        title: app_commands.Range[str, challenge_problem_title_min_length, challenge_problem_title_max_length],
-    ):
-        filenames = "\n".join(f"`{name}`" for name in CHALLENGE_ATTACHMENT_FILENAMES)
-        await interaction.response.send_message(
-            embed=info(
-                "Send one message in this channel with these seven files attached:\n\n"
-                f"{filenames}\n\nThis upload expires in 3 minutes.",
-                interaction.user,
-            ),
-            ephemeral=True,
-        )
-
-        def is_upload(message: discord.Message) -> bool:
-            return (
-                message.author.id == interaction.user.id
-                and message.channel.id == interaction.channel_id
-                and message.guild is not None
-                and message.guild.id == interaction.guild_id
-            )
-
-        try:
-            message = await self.bot.wait_for("message", check=is_upload, timeout=180)
-            attachments = arrange_challenge_attachments(message.attachments)
             tests = await self._save_problem(interaction, str(title), attachments)
         except TimeoutError:
             await interaction.followup.send(embed=warning("Bulk challenge upload timed out."), ephemeral=True)
             return
         except Exception as exc:
-            logger.exception("Could not add challenge problem in bulk")
+            logger.exception("Could not add challenge problem")
             await interaction.followup.send(embed=failure(f"Could not save problem: {exc}"), ephemeral=True)
             return
 
