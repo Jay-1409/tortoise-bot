@@ -1,4 +1,0 @@
-interface:
-  display_name: "Challenge Problem Formatter"
-  short_description: "Create challenge files from a problem"
-  default_prompt: "Use $challenge-problem-formatter to turn this coding problem into the bot's challenge package."
