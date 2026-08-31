@@ -138,9 +138,12 @@ After running the command, paste your function implementation into the popup.
 **Behavior**
 
 - Runs the submitted code against hidden tests.
+- Saves the submitted source code with the submission record.
 - Uses the selected language boilerplate.
 - Awards points only if all tests pass.
 - Does not award duplicate points for already-solved problems.
+- Posts accepted submissions with a public **See solution** button. The source is returned privately as a spoiler file.
+- Moderators can award one **Optimal solution** bonus of 50 points from the submission log.
 
 #### `/challenge reveal-tests`
 
@@ -324,6 +327,7 @@ Tests the full judge flow using a small `add(a, b)` problem:
 ### Notes
 
 - Accepted submissions are logged to the challenge log channel.
+- Accepted-submission logs include solution-view and moderator-only optimal-bonus buttons.
 - A full accepted solve awards 100 points.
 - Duplicate accepted solves do not award points again.
 - Test reveal costs 50 points only the first time per user per problem.

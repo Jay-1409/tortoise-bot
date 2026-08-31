@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from bot.cogs.challenges import Challenges
+from bot.cogs.challenges import Challenges, submission_log_view
 from bot.utils.challenge import CHALLENGE_ATTACHMENT_FILENAMES, arrange_challenge_attachments
 
 
@@ -27,6 +27,16 @@ class ChallengeAttachmentTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "missing: expected-outputs.json; unexpected: wrong.json"):
             arrange_challenge_attachments(attachments)
+
+    def test_submission_log_buttons_keep_submission_id(self):
+        view = submission_log_view(42, optimal_awarded=True)
+
+        self.assertEqual(
+            [button.custom_id for button in view.children],
+            ["challenge_solution:42", "challenge_optimal:42"],
+        )
+        self.assertFalse(view.children[0].disabled)
+        self.assertTrue(view.children[1].disabled)
 
 
 if __name__ == "__main__":

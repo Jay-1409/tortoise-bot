@@ -16,6 +16,7 @@ from bot.constants import (
     challenge_execution_api_default_timeout_ms,
     challenge_execution_api_default_url,
     challenge_modal_submission_max_length,
+    challenge_optimal_solution_bonus,
     challenge_pipeline_smoke_test_cases,
     challenge_pipeline_smoke_tests,
     challenge_problem_title_max_length,
@@ -29,7 +30,7 @@ from bot.constants import (
     success_emoji,
     failure_emoji, challenge_logs_public_channel_id,
 )
-from bot.utils.checks import check_if_tortoise_staff
+from bot.utils.checks import check_if_tortoise_mod, check_if_tortoise_staff
 from bot.utils.challenge import (
     CHALLENGE_ATTACHMENT_FILENAMES,
     ExecutionApiClient,
@@ -50,6 +51,7 @@ from bot.utils.embed_handler import (
     success,
     warning,
 )
+from bot.utils.exceptions import TortoiseStaffCheckFailure
 
 
 logger = logging.getLogger(__name__)
@@ -68,6 +70,24 @@ PIPELINE_LANGUAGE_CHOICES = [
     app_commands.Choice(name="All languages", value="all"),
     *LANGUAGE_CHOICES,
 ]
+
+
+def submission_log_view(submission_id: int, *, optimal_awarded: bool = False) -> discord.ui.View:
+    view = discord.ui.View(timeout=None)
+    view.add_item(discord.ui.Button(
+        label="See solution",
+        style=discord.ButtonStyle.primary,
+        emoji="👀",
+        custom_id=f"challenge_solution:{submission_id}",
+    ))
+    view.add_item(discord.ui.Button(
+        label="Optimal solution (+50)",
+        style=discord.ButtonStyle.success,
+        emoji="✅",
+        custom_id=f"challenge_optimal:{submission_id}",
+        disabled=optimal_awarded,
+    ))
+    return view
 
 
 async def challenge_problem_autocomplete(
@@ -196,6 +216,86 @@ class Challenges(commands.Cog):
         if self._challenge_log_public_channel is None:
             self._challenge_log_public_channel = self.bot.get_channel(challenge_logs_public_channel_id)
         return self._challenge_log_public_channel
+
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        if interaction.type != discord.InteractionType.component or not interaction.data:
+            return
+
+        custom_id = interaction.data.get("custom_id", "")
+        if not custom_id.startswith(("challenge_solution:", "challenge_optimal:")):
+            return
+
+        try:
+            submission_id = int(custom_id.rsplit(":", 1)[1])
+        except (IndexError, ValueError):
+            return
+
+        if custom_id.startswith("challenge_solution:"):
+            await interaction.response.defer(ephemeral=True)
+            submission = await self.challenge_manager.get_submission_solution(submission_id)
+            if submission is None:
+                await interaction.followup.send(
+                    embed=failure("This accepted solution is no longer available."),
+                    ephemeral=True,
+                )
+                return
+
+            file = discord.File(
+                io.BytesIO(submission["solution"].encode("utf-8")),
+                filename=f"{submission['problem_slug']}-{submission['language']}-solution.txt",
+                spoiler=True,
+            )
+            await interaction.followup.send(
+                content=f"Accepted solution from <@{submission['user_id']}>.",
+                file=file,
+                ephemeral=True,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            return
+
+        try:
+            await check_if_tortoise_mod(interaction)
+        except TortoiseStaffCheckFailure:
+            await interaction.response.send_message(
+                embed=failure("Only moderators can award the optimal-solution bonus."),
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        status, user_id, total_points = await self.challenge_manager.award_optimal_solution(
+            submission_id,
+            interaction.user.id,
+        )
+        if status != "awarded":
+            message = {
+                "missing": "Submission not found.",
+                "not_accepted": "Only accepted submissions can receive this bonus.",
+                "already_awarded": "The optimal-solution bonus was already awarded.",
+            }[status]
+            await interaction.followup.send(embed=warning(message), ephemeral=True)
+            return
+
+        if interaction.message and interaction.message.embeds:
+            embed = discord.Embed.from_dict(interaction.message.embeds[0].to_dict())
+            embed.add_field(
+                name="Optimal solution",
+                value=f"+{challenge_optimal_solution_bonus} points awarded by {interaction.user.mention}",
+                inline=False,
+            )
+            await interaction.message.edit(
+                embed=embed,
+                view=submission_log_view(submission_id, optimal_awarded=True),
+            )
+
+        await interaction.followup.send(
+            embed=success(
+                f"Awarded <@{user_id}> **{challenge_optimal_solution_bonus} points**. "
+                f"New total: **{total_points}**."
+            ),
+            ephemeral=True,
+        )
 
     @challenge_group.command(name="rules", description="Show challenge guidelines.")
     async def challenge_rules(self, interaction: discord.Interaction):
@@ -735,6 +835,18 @@ class Challenges(commands.Cog):
             )
             return
 
+        submission_id = await self.challenge_manager.record_submission(
+            guild_id=interaction.guild_id,
+            slug=selected.slug,
+            user_id=interaction.user.id,
+            language=language_value,
+            solution=submitted_code,
+            status="pending",
+            passed=0,
+            total=len(selected.tests),
+            error=None,
+        )
+
         judge_started_at = time.perf_counter()
         try:
             result = await judge_submission(
@@ -745,7 +857,14 @@ class Challenges(commands.Cog):
                 tests=selected.tests,
             )
         except Exception as exc:
-            logger.exception("Judge failed before recording submission")
+            logger.exception("Judge failed after recording submission")
+            await self.challenge_manager.update_submission_result(
+                submission_id,
+                status="error",
+                passed=0,
+                total=len(selected.tests),
+                error=f"Judge unavailable: {exc}",
+            )
             await interaction.followup.send(embed=failure(f"Judge unavailable: {exc}"), ephemeral=True)
             return
         judge_elapsed_ms = round((time.perf_counter() - judge_started_at) * 1000)
@@ -759,11 +878,8 @@ class Challenges(commands.Cog):
                 result.diagnostic,
             )
 
-        await self.challenge_manager.record_submission(
-            guild_id=interaction.guild_id,
-            slug=selected.slug,
-            user_id=interaction.user.id,
-            language=language_value,
+        await self.challenge_manager.update_submission_result(
+            submission_id,
             status="accepted" if result.accepted else "rejected",
             passed=result.passed,
             total=result.total,
@@ -813,6 +929,7 @@ class Challenges(commands.Cog):
                 current_rank=current_rank,
                 total_points=total_points,
                 newly_solved=True,
+                submission_id=submission_id,
             )
             await interaction.followup.send(
                 embed=success(
@@ -839,6 +956,7 @@ class Challenges(commands.Cog):
                 current_rank=current_rank,
                 total_points=total_points,
                 newly_solved=False,
+                submission_id=submission_id,
             )
             await interaction.followup.send(
                 embed=success(
@@ -892,6 +1010,7 @@ class Challenges(commands.Cog):
         current_rank: Optional[int],
         total_points: int,
         newly_solved: bool,
+        submission_id: int,
     ):
         guild = interaction.guild
         if guild is None:
@@ -922,7 +1041,11 @@ class Challenges(commands.Cog):
         embed.add_field(name="Total points", value=str(total_points), inline=True)
         embed.add_field(name="Leaderboard", value=leaderboard_change, inline=True)
 
-        await self.challenge_log_public_channel.send(content=interaction.user.mention, embed=embed)
+        await self.challenge_log_public_channel.send(
+            content=interaction.user.mention,
+            embed=embed,
+            view=submission_log_view(submission_id),
+        )
 
     async def reveal_tests_for_user(self, interaction: discord.Interaction, problem: Problem):
         should_deduct = await self.challenge_manager.mark_tests_revealed(
