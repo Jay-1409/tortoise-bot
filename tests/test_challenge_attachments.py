@@ -29,14 +29,18 @@ class ChallengeAttachmentTests(unittest.TestCase):
             arrange_challenge_attachments(attachments)
 
     def test_submission_log_buttons_keep_submission_id(self):
-        view = submission_log_view(42, optimal_awarded=True)
+        public_view = submission_log_view(42)
+        moderator_view = submission_log_view(42, moderator=True, optimal_awarded=True)
 
         self.assertEqual(
-            [button.custom_id for button in view.children],
+            [button.custom_id for button in public_view.children],
+            ["challenge_solution:42"],
+        )
+        self.assertEqual(
+            [button.custom_id for button in moderator_view.children],
             ["challenge_solution:42", "challenge_optimal:42"],
         )
-        self.assertFalse(view.children[0].disabled)
-        self.assertTrue(view.children[1].disabled)
+        self.assertTrue(moderator_view.children[1].disabled)
 
 
 if __name__ == "__main__":

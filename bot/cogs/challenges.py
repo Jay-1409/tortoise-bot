@@ -72,7 +72,12 @@ PIPELINE_LANGUAGE_CHOICES = [
 ]
 
 
-def submission_log_view(submission_id: int, *, optimal_awarded: bool = False) -> discord.ui.View:
+def submission_log_view(
+    submission_id: int,
+    *,
+    moderator: bool = False,
+    optimal_awarded: bool = False,
+) -> discord.ui.View:
     view = discord.ui.View(timeout=None)
     view.add_item(discord.ui.Button(
         label="See solution",
@@ -80,13 +85,14 @@ def submission_log_view(submission_id: int, *, optimal_awarded: bool = False) ->
         emoji="👀",
         custom_id=f"challenge_solution:{submission_id}",
     ))
-    view.add_item(discord.ui.Button(
-        label="Optimal solution (+50)",
-        style=discord.ButtonStyle.success,
-        emoji="✅",
-        custom_id=f"challenge_optimal:{submission_id}",
-        disabled=optimal_awarded,
-    ))
+    if moderator:
+        view.add_item(discord.ui.Button(
+            label="Optimal solution (+50)",
+            style=discord.ButtonStyle.success,
+            emoji="✅",
+            custom_id=f"challenge_optimal:{submission_id}",
+            disabled=optimal_awarded,
+        ))
     return view
 
 
@@ -286,7 +292,7 @@ class Challenges(commands.Cog):
             )
             await interaction.message.edit(
                 embed=embed,
-                view=submission_log_view(submission_id, optimal_awarded=True),
+                view=submission_log_view(submission_id, moderator=True, optimal_awarded=True),
             )
 
         await interaction.followup.send(
@@ -1045,6 +1051,11 @@ class Challenges(commands.Cog):
             content=interaction.user.mention,
             embed=embed,
             view=submission_log_view(submission_id),
+        )
+        await self.challenge_log_channel.send(
+            content=interaction.user.mention,
+            embed=embed,
+            view=submission_log_view(submission_id, moderator=True),
         )
 
     async def reveal_tests_for_user(self, interaction: discord.Interaction, problem: Problem):
